@@ -1,0 +1,405 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}{{ service.service_name }} - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+  <!-- Breadcrumb -->
+  <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+    <a href="{% url 'home' %}">Home</a> &gt; 
+    <a href="{% url 'services' %}">Services</a> &gt; 
+    <a href="{% url 'services' %}?category={{ service.category.id }}">{{ service.category.name }}</a> &gt; 
+    <span style="color: var(--text-main);">{{ service.service_name }}</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 2fr 1.1fr; gap: 2rem; align-items: start;">
+    
+    <!-- Left Column: Service Details & Reviews -->
+    <div>
+      <div class="card" style="margin-bottom: 2rem;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <span class="badge badge-teal" style="margin-bottom: 0.5rem;">
+              {{ service.category.icon }} {{ service.category.name }}
+            </span>
+            <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+              {{ service.service_name }}
+            </h1>
+            <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); font-size: 0.95rem;">
+              <span>By <a href="{% url 'provider_profile' provider.id %}" style="font-weight: 700; color: var(--text-main);">{{ provider.business_name }}</a></span>
+              <span>•</span>
+              <span style="color: #D97706; font-weight: 700;">
+                {% if service.avg_rating %}
+                  {{ service.avg_rating|render_stars }} {{ service.avg_rating|format_rating }} ({{ service.review_count }} review{{ service.review_count|pluralize }})
+                {% else %}
+                  ★ New Service
+                {% endif %}
+              </span>
+            </div>
+          </div>
+
+          <div style="text-align: right; background: var(--primary-light); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--primary-border);">
+            <div style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 600;">Pricing</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: var(--primary-dark);">{{ service.price_info }}</div>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.25rem 0;">
+
+        <!-- Description -->
+        <div style="margin-bottom: 1.75rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem;">Service Description</h3>
+          <p style="color: var(--text-muted); line-height: 1.75; font-size: 1rem;">
+            {{ service.description }}
+          </p>
+        </div>
+
+        <!-- Coverage & Service Specs -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-main);">
+            📍 Service Coverage Details
+          </h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">Coverage Areas:</span>
+              <strong>{{ service.service_area }}</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Provider Base:</span>
+              <strong>{{ provider.area }} (Pune Region)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reviews Section -->
+      <div class="card" id="reviews-section">
+        <div class="card-title">
+          <div>
+            <span>Customer Reviews</span>
+            <span style="font-size: 0.95rem; font-weight: 500; color: var(--text-muted); margin-left: 0.5rem;">
+              ({{ reviews.count }} approved review{{ reviews.count|pluralize }})
+            </span>
+          </div>
+
+          {% if service.avg_rating %}
+            <div style="color: #D97706; font-size: 1.1rem; font-weight: 700;">
+              {{ service.avg_rating|render_stars }} {{ service.avg_rating|format_rating }} / 5.0
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Review List -->
+        {% if reviews %}
+          <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 2rem;">
+            {% for rev in reviews %}
+              <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <div>
+                    <strong style="color: var(--text-main);">{{ rev.customer.first_name|default:rev.customer.username }}</strong>
+                    <span class="badge badge-success" style="font-size: 0.7rem; margin-left: 0.35rem;">Verified Customer</span>
+                  </div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">{{ rev.review_date|date:"d M Y" }}</span>
+                </div>
+
+                <div style="color: #D97706; margin-bottom: 0.4rem; font-size: 0.95rem;">
+                  {{ rev.rating|render_stars }} ({{ rev.rating }}/5)
+                </div>
+
+                <p style="color: var(--text-muted); font-size: 0.925rem; line-height: 1.6;">
+                  {{ rev.review_text }}
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            <p>No customer reviews approved yet for this service.</p>
+          </div>
+        {% endif %}
+
+        <!-- Review Submission Section -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-top: 1rem;">
+          <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Leave a Review</h4>
+
+          {% if not user.is_authenticated %}
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+              Only customers who have booked and completed this service can share a review.
+            </p>
+            <a href="{% url 'login' %}?next={{ request.path }}#reviews-section" class="btn btn-outline btn-sm">
+              Sign In to Review
+            </a>
+
+          {% elif not user.is_customer %}
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              You are logged in as a <strong>{{ user.get_role_display }}</strong>. Only customer accounts can leave service reviews.
+            </p>
+
+          {% elif user_has_reviewed %}
+            <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
+              <span style="font-size: 1.25rem;">✅</span>
+              <div>
+                <strong>You have already submitted a review for this service.</strong>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                  Status: 
+                  {% if existing_user_review.moderation_status == 'approved' %}
+                    <span class="badge badge-success">Approved</span>
+                  {% elif existing_user_review.moderation_status == 'pending' %}
+                    <span class="badge badge-warning">Pending Approval</span>
+                  {% else %}
+                    <span class="badge badge-danger">Rejected</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+          {% elif can_review %}
+            <!-- Review Form -->
+            <form method="POST" action="{% url 'review_create' service.id %}" id="reviewForm">
+              {% csrf_token %}
+              
+              <!-- Star Rating Selection Widget -->
+              <div class="form-group">
+                <label class="form-label">Select Your Rating</label>
+                <div id="starPicker" style="display: flex; gap: 0.4rem; font-size: 1.8rem; cursor: pointer; color: #D97706; user-select: none;">
+                  <span class="star-btn" data-val="1">★</span>
+                  <span class="star-btn" data-val="2">★</span>
+                  <span class="star-btn" data-val="3">★</span>
+                  <span class="star-btn" data-val="4">★</span>
+                  <span class="star-btn" data-val="5">★</span>
+                </div>
+                <input type="hidden" name="rating" id="id_rating" value="5">
+                <div id="ratingHelpText" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                  Selected: 5 out of 5 stars (Excellent)
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="id_review_text">Your Feedback</label>
+                <textarea 
+                  name="review_text" 
+                  id="id_review_text" 
+                  rows="3" 
+                  class="form-input" 
+                  placeholder="Share details of your experience with this service provider (minimum 10 characters)..." 
+                  required 
+                  minlength="10"
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-sm">
+                Submit Review for Moderation
+              </button>
+            </form>
+
+          {% else %}
+            <!-- Not eligible notice -->
+            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+              ℹ️ To ensure high-quality, genuine feedback, reviews can only be submitted after you book this service and the booking is marked <strong>Completed</strong>.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Provider Summary & Action Forms -->
+    <div>
+      <!-- Provider Summary Card -->
+      <div class="card" style="margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+          <span class="badge badge-success">✓ Verified Partner</span>
+          {% if provider.availability_status == 'available' %}
+            <span class="badge badge-success">● Available</span>
+          {% else %}
+            <span class="badge badge-warning">● Busy</span>
+          {% endif %}
+        </div>
+
+        <h3 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+          {{ provider.business_name }}
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
+          Contact Person: {{ provider.user.get_full_name|default:provider.user.username }}
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.9rem; margin-bottom: 1.5rem;">
+          <div>
+            <span style="color: var(--text-muted);">Experience:</span>
+            <strong>{{ provider.experience }} Years in field</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted);">Main Hub:</span>
+            <strong>{{ provider.area }}, Pune</strong>
+          </div>
+          <div>
+            <span style="color: var(--text-muted);">Address:</span>
+            <span>{{ provider.address }}</span>
+          </div>
+        </div>
+
+        {% if provider.description %}
+          <p style="font-size: 0.85rem; color: var(--text-muted); background: #F8FAFC; padding: 0.85rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem;">
+            "{{ provider.description }}"
+          </p>
+        {% endif %}
+
+        <a href="{% url 'provider_profile' provider.id %}" class="btn btn-secondary btn-sm" style="width: 100%;">
+          View Full Provider Profile →
+        </a>
+      </div>
+
+      <!-- Request This Service Form Card -->
+      <div class="card" style="margin-bottom: 2rem;">
+        <h3 class="card-title" style="margin-bottom: 0.75rem;">
+          <span>📅 Request This Service</span>
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">
+          Schedule an appointment with {{ provider.business_name }}. The provider will contact you to confirm.
+        </p>
+
+        {% if user.is_authenticated %}
+          {% if user.is_customer %}
+            <form method="POST" action="{% url 'service_request_create' service.id %}" id="serviceRequestForm">
+              {% csrf_token %}
+              
+              <div class="form-group">
+                <label class="form-label" for="id_preferred_date">Preferred Date</label>
+                <input 
+                  type="date" 
+                  name="preferred_date" 
+                  id="id_preferred_date" 
+                  class="form-input" 
+                  min="{{ today }}" 
+                  required
+                >
+                <div class="form-help">Select today or a future date</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="id_description">Describe Your Problem</label>
+                <textarea 
+                  name="description" 
+                  id="id_description" 
+                  rows="3" 
+                  class="form-input" 
+                  placeholder="e.g. Switchboard sparking in hall, need immediate inspection (min 10 characters)..." 
+                  required 
+                  minlength="10"
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Confirm Booking Request
+              </button>
+            </form>
+          {% else %}
+            <div style="background: var(--warning-bg); color: #78350F; padding: 1rem; border-radius: var(--radius-md); font-size: 0.875rem;">
+              You are signed in as a <strong>{{ user.get_role_display }}</strong>. Please switch to a customer account to book services.
+            </div>
+          {% endif %}
+        {% else %}
+          <div style="text-align: center; padding: 1.5rem 0.5rem;">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+              Please log in with your customer account to place a service request.
+            </p>
+            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary" style="width: 100%;">
+              Log In to Book Service
+            </a>
+            <div style="margin-top: 0.75rem; font-size: 0.825rem;">
+              New customer? <a href="{% url 'register' %}">Create account</a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Send Enquiry Form Card -->
+      <div class="card">
+        <h3 class="card-title" style="margin-bottom: 0.75rem;">
+          <span>💬 Send Direct Inquiry</span>
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">
+          Ask a question regarding pricing, material requirements, or availability.
+        </p>
+
+        {% if user.is_authenticated %}
+          {% if user.is_customer %}
+            <form method="POST" action="{% url 'service_enquiry_create' service.id %}">
+              {% csrf_token %}
+              <div class="form-group">
+                <label class="form-label" for="id_enquiry_message">Message</label>
+                <textarea 
+                  name="message" 
+                  id="id_enquiry_message" 
+                  rows="3" 
+                  class="form-input" 
+                  placeholder="Ask your question here (minimum 10 characters)..." 
+                  required 
+                  minlength="10"
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                Send Inquiry Message
+              </button>
+            </form>
+          {% else %}
+            <div style="background: var(--warning-bg); color: #78350F; padding: 0.85rem; border-radius: var(--radius-md); font-size: 0.85rem;">
+              Only customers can send inquiries.
+            </div>
+          {% endif %}
+        {% else %}
+          <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline" style="width: 100%;">
+            Log In to Send Inquiry
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Star rating interactive picker
+  const starButtons = document.querySelectorAll('.star-btn');
+  const ratingInput = document.getElementById('id_rating');
+  const helpText = document.getElementById('ratingHelpText');
+
+  const labels = {
+    1: '1 out of 5 stars (Poor)',
+    2: '2 out of 5 stars (Fair)',
+    3: '3 out of 5 stars (Good)',
+    4: '4 out of 5 stars (Very Good)',
+    5: '5 out of 5 stars (Excellent)'
+  };
+
+  if (starButtons.length > 0 && ratingInput) {
+    function updateStars(val) {
+      starButtons.forEach(btn => {
+        const btnVal = parseInt(btn.getAttribute('data-val'));
+        btn.textContent = btnVal <= val ? '★' : '☆';
+      });
+      if (helpText && labels[val]) {
+        helpText.textContent = `Selected: ${labels[val]}`;
+      }
+    }
+
+    starButtons.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const val = parseInt(this.getAttribute('data-val'));
+        ratingInput.value = val;
+        updateStars(val);
+      });
+    });
+
+    // Initialize with 5 stars
+    updateStars(parseInt(ratingInput.value || 5));
+  }
+});
+</script>
+{% endblock %}

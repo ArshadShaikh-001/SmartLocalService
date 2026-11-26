@@ -96,6 +96,25 @@ class ServiceProvider(models.Model):
     def __str__(self):
         return f"{self.business_name} - {self.area}"
 
+    def average_rating(self):
+        """Calculates average rating across all approved reviews for this provider's services."""
+        approved_reviews = Review.objects.filter(service__provider=self, moderation_status='approved')
+        if approved_reviews.exists():
+            total = sum(r.rating for r in approved_reviews)
+            return round(total / approved_reviews.count(), 1)
+        return None
+
+    def approved_reviews_count(self):
+        return Review.objects.filter(service__provider=self, moderation_status='approved').count()
+
+    @property
+    def stars(self):
+        avg = self.average_rating()
+        if avg is None:
+            return ""
+        rounded = round(avg)
+        return "★" * rounded + "☆" * (5 - rounded)
+
 
 # ==============================================================================
 # 4. Service Model
@@ -124,6 +143,9 @@ class Service(models.Model):
 
     def average_rating(self):
         """Calculates average rating for approved reviews only."""
+        # Use annotated avg_rating if present to avoid extra database query
+        if hasattr(self, 'avg_rating') and self.avg_rating is not None:
+            return round(self.avg_rating, 1)
         approved_reviews = self.reviews.filter(moderation_status='approved')
         if approved_reviews.exists():
             total = sum(r.rating for r in approved_reviews)
@@ -131,7 +153,19 @@ class Service(models.Model):
         return None
 
     def approved_reviews_count(self):
+        # Use annotated review_count if present
+        if hasattr(self, 'review_count'):
+            return self.review_count
         return self.reviews.filter(moderation_status='approved').count()
+
+    @property
+    def stars(self):
+        """Returns visual star string representation, e.g. ★★★★☆."""
+        avg = self.average_rating()
+        if avg is None:
+            return ""
+        rounded = round(avg)
+        return "★" * rounded + "☆" * (5 - rounded)
 
 
 # ==============================================================================
@@ -144,6 +178,7 @@ class ServiceRequest(models.Model):
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
         ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
     )
 
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='service_requests')

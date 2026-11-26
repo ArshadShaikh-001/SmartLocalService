@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load service_tags %}
 
 {% block title %}Customer Dashboard - Smart Local Service Connect{% endblock %}
 
@@ -9,11 +10,11 @@
     <div class="dashboard-title-row">
       <div>
         <h1 class="dashboard-heading">Hello, {{ user.first_name|default:user.username }} 👋</h1>
-        <p class="dashboard-subheading">Customer Portal • Manage your service bookings and trusted reviews</p>
+        <p class="dashboard-subheading">Customer Portal • Manage your profile, bookings, inquiries, and reviews</p>
       </div>
-      <div>
+      <div style="display: flex; gap: 0.75rem;">
         <a href="{% url 'services' %}" class="btn btn-primary">
-          <span>🔍</span> Browse Local Services
+          <span>🔍</span> Find More Services
         </a>
       </div>
     </div>
@@ -21,7 +22,7 @@
 </section>
 
 <div class="container" style="padding-bottom: 4rem;">
-  <!-- Summary Cards -->
+  <!-- Metric KPI Cards -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-icon">📅</div>
@@ -34,8 +35,16 @@
     <div class="stat-card">
       <div class="stat-icon">⏳</div>
       <div>
-        <div class="stat-value">{{ pending_requests }}</div>
+        <div class="stat-value" style="color: var(--warning);">{{ pending_requests }}</div>
         <div class="stat-label">Pending Confirmation</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">💬</div>
+      <div>
+        <div class="stat-value">{{ enquiries.count }}</div>
+        <div class="stat-label">Sent Inquiries</div>
       </div>
     </div>
 
@@ -43,24 +52,57 @@
       <div class="stat-icon">⭐</div>
       <div>
         <div class="stat-value">{{ reviews.count }}</div>
-        <div class="stat-label">Reviews Shared</div>
-      </div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-icon">📞</div>
-      <div>
-        <div class="stat-value" style="font-size: 1.1rem; font-weight: 700;">{{ user.phone|default:"Not added" }}</div>
-        <div class="stat-label">Registered Phone</div>
+        <div class="stat-label">My Reviews</div>
       </div>
     </div>
   </div>
 
-  <!-- Service Requests Table -->
-  <div class="card">
+  <!-- Profile Edit Card -->
+  <div class="card" style="margin-bottom: 2rem;">
     <div class="card-title">
-      <span>My Service Bookings</span>
-      <span class="badge badge-teal">{{ requests.count }} Record{{ requests.count|pluralize }}</span>
+      <span>👤 My Profile Information</span>
+      <span class="badge badge-teal">Account Role: Customer</span>
+    </div>
+
+    <form method="POST" action="{% url 'customer_dashboard' %}" id="profileEditForm">
+      {% csrf_token %}
+      <input type="hidden" name="update_profile" value="1">
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="id_first_name">First Name</label>
+          {{ profile_form.first_name }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_last_name">Last Name</label>
+          {{ profile_form.last_name }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_email">Email Address</label>
+          {{ profile_form.email }}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_phone">Phone Number</label>
+          {{ profile_form.phone }}
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
+        <button type="submit" class="btn btn-primary btn-sm">
+          Save Profile Changes
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Service Bookings Table -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title">
+      <span>My Service Requests</span>
+      <span class="badge badge-teal">{{ requests.count }} Request{{ requests.count|pluralize }}</span>
     </div>
 
     {% if requests %}
@@ -74,27 +116,57 @@
               <th>Preferred Date</th>
               <th>Status</th>
               <th>Booked On</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {% for req in requests %}
               <tr>
                 <td>#{{ req.id }}</td>
-                <td><strong>{{ req.service.service_name }}</strong></td>
-                <td>{{ req.service.provider.business_name }} ({{ req.service.provider.area }})</td>
+                <td>
+                  <a href="{% url 'service_detail' req.service.id %}" style="font-weight: 700;">
+                    {{ req.service.service_name }}
+                  </a>
+                </td>
+                <td>
+                  <a href="{% url 'provider_profile' req.service.provider.id %}">
+                    {{ req.service.provider.business_name }}
+                  </a>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    📍 {{ req.service.provider.area }}
+                  </div>
+                </td>
                 <td>{{ req.preferred_date|date:"d M Y" }}</td>
                 <td>
                   {% if req.status == 'pending' %}
-                    <span class="badge badge-warning">Pending</span>
+                    <span class="badge badge-warning">⏳ Pending</span>
                   {% elif req.status == 'accepted' %}
-                    <span class="badge badge-success">Accepted</span>
+                    <span class="badge badge-success">✓ Accepted</span>
                   {% elif req.status == 'completed' %}
-                    <span class="badge badge-teal">Completed</span>
+                    <span class="badge badge-teal">✓ Completed</span>
+                  {% elif req.status == 'cancelled' %}
+                    <span class="badge badge-danger">Cancelled</span>
                   {% else %}
                     <span class="badge badge-danger">Rejected</span>
                   {% endif %}
                 </td>
                 <td>{{ req.request_date|date:"d M Y" }}</td>
+                <td>
+                  {% if req.status == 'pending' %}
+                    <form method="POST" action="{% url 'cancel_request' req.id %}" onsubmit="return confirm('Are you sure you want to cancel this pending booking request?');" style="display: inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-secondary btn-sm" style="color: var(--danger); border-color: #FECACA; padding: 0.25rem 0.65rem; font-size: 0.775rem;">
+                        Cancel
+                      </button>
+                    </form>
+                  {% elif req.status == 'completed' %}
+                    <a href="{% url 'service_detail' req.service.id %}#reviews-section" class="btn btn-outline btn-sm" style="padding: 0.25rem 0.65rem; font-size: 0.775rem;">
+                      Review
+                    </a>
+                  {% else %}
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -102,13 +174,61 @@
       </div>
     {% else %}
       <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
-        <p style="font-size: 1.1rem; margin-bottom: 1rem;">You have not booked any services yet.</p>
-        <a href="{% url 'services' %}" class="btn btn-outline btn-sm">Find a Service Near You</a>
+        <p style="font-size: 1.05rem; margin-bottom: 1rem;">You haven't requested any services yet.</p>
+        <a href="{% url 'services' %}" class="btn btn-outline btn-sm">Explore Services Near You</a>
       </div>
     {% endif %}
   </div>
 
-  <!-- Reviews List -->
+  <!-- My Enquiries Table -->
+  <div class="card" style="margin-bottom: 2rem;">
+    <div class="card-title">
+      <span>My Direct Inquiries</span>
+      <span class="badge badge-teal">{{ enquiries.count }} Message{{ enquiries.count|pluralize }}</span>
+    </div>
+
+    {% if enquiries %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Provider</th>
+              <th>Inquiry Message</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for enq in enquiries %}
+              <tr>
+                <td>{{ enq.enquiry_date|date:"d M Y, h:i A" }}</td>
+                <td>
+                  <a href="{% url 'provider_profile' enq.provider.id %}" style="font-weight: 600;">
+                    {{ enq.provider.business_name }}
+                  </a>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">{{ enq.provider.area }}</div>
+                </td>
+                <td style="max-width: 450px;">{{ enq.message }}</td>
+                <td>
+                  {% if enq.status == 'new' %}
+                    <span class="badge badge-warning">Sent (Awaiting Reply)</span>
+                  {% else %}
+                    <span class="badge badge-success">✓ Replied</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+        No messages or inquiries sent yet.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Customer's Reviews Table -->
   <div class="card">
     <div class="card-title">
       <span>My Submitted Reviews</span>
@@ -121,8 +241,9 @@
           <thead>
             <tr>
               <th>Service</th>
+              <th>Provider</th>
               <th>Rating</th>
-              <th>Review Feedback</th>
+              <th>Feedback</th>
               <th>Moderation Status</th>
               <th>Date</th>
             </tr>
@@ -130,14 +251,19 @@
           <tbody>
             {% for rev in reviews %}
               <tr>
-                <td><strong>{{ rev.service.service_name }}</strong></td>
-                <td><span style="color: #D97706; font-weight: 700;">★ {{ rev.rating }} / 5</span></td>
+                <td>
+                  <a href="{% url 'service_detail' rev.service.id %}" style="font-weight: 700;">
+                    {{ rev.service.service_name }}
+                  </a>
+                </td>
+                <td>{{ rev.service.provider.business_name }}</td>
+                <td><span style="color: #D97706; font-weight: 700;">{{ rev.rating|render_stars }} ({{ rev.rating }}/5)</span></td>
                 <td>{{ rev.review_text|truncatewords:15 }}</td>
                 <td>
                   {% if rev.moderation_status == 'approved' %}
-                    <span class="badge badge-success">Approved</span>
+                    <span class="badge badge-success">✓ Approved</span>
                   {% elif rev.moderation_status == 'pending' %}
-                    <span class="badge badge-warning">Pending Moderation</span>
+                    <span class="badge badge-warning">⏳ Pending Approval</span>
                   {% else %}
                     <span class="badge badge-danger">Rejected</span>
                   {% endif %}
@@ -150,7 +276,7 @@
       </div>
     {% else %}
       <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
-        No reviews submitted yet. Reviews can be shared once a service is completed.
+        No reviews submitted yet. Once a technician completes your service request, you can post a review!
       </div>
     {% endif %}
   </div>

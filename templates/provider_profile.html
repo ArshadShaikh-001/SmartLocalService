@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}{{ provider.business_name }} - Provider Profile{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 4rem;">
+  <!-- Breadcrumb -->
+  <div style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+    <a href="{% url 'home' %}">Home</a> &gt; 
+    <a href="{% url 'services' %}">Providers</a> &gt; 
+    <span style="color: var(--text-main);">{{ provider.business_name }}</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 2fr 1.1fr; gap: 2rem; align-items: start;">
+    
+    <!-- Left Column: Business Info & Services List -->
+    <div>
+      <div class="card" style="margin-bottom: 2rem;">
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <span class="badge badge-success">✓ Background Verified</span>
+              {% if provider.availability_status == 'available' %}
+                <span class="badge badge-success">● Available</span>
+              {% else %}
+                <span class="badge badge-warning">● Busy</span>
+              {% endif %}
+            </div>
+
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.35rem;">
+              {{ provider.business_name }}
+            </h1>
+
+            <div style="color: var(--text-muted); font-size: 0.95rem;">
+              Lead Specialist: <strong>{{ provider.user.get_full_name|default:provider.user.username }}</strong> • 
+              Primary Area: <strong>{{ provider.area }}</strong>
+            </div>
+          </div>
+
+          <div style="text-align: right; background: var(--primary-light); padding: 0.75rem 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--primary-border);">
+            <div style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 600;">Experience</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: var(--primary-dark);">{{ provider.experience }} Years</div>
+          </div>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 1.25rem 0;">
+
+        <!-- Description -->
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.6rem;">About This Provider</h3>
+          <p style="color: var(--text-muted); line-height: 1.75;">
+            {{ provider.description|default:"Professional local technician committed to dependable, high-quality doorstep repairs and installations." }}
+          </p>
+        </div>
+
+        <!-- Address & Operational Details -->
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+          <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem;">Workshop &amp; Service Location</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block;">Workshop / Base Address:</span>
+              <strong>{{ provider.address }}</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block;">Primary Area / Town:</span>
+              <strong>{{ provider.area }}, Pune District</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Offered by Provider -->
+      <div class="card" style="margin-bottom: 2rem;">
+        <div class="card-title">
+          <span>Active Services Offered</span>
+          <span class="badge badge-teal">{{ services.count }} Available</span>
+        </div>
+
+        {% if services %}
+          <div class="services-grid" style="grid-template-columns: 1fr;">
+            {% for srv in services %}
+              <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div>
+                  <span class="badge badge-teal" style="font-size: 0.75rem; margin-bottom: 0.35rem;">
+                    {{ srv.category.icon }} {{ srv.category.name }}
+                  </span>
+                  <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.3rem;">
+                    <a href="{% url 'service_detail' srv.id %}" style="color: inherit;">
+                      {{ srv.service_name }}
+                    </a>
+                  </h3>
+                  <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0.5rem;">
+                    {{ srv.description|truncatewords:15 }}
+                  </p>
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    📍 Coverage: {{ srv.service_area }}
+                  </div>
+                </div>
+
+                <div style="text-align: right; min-width: 140px;">
+                  <div class="service-price" style="margin-bottom: 0.25rem;">{{ srv.price_info }}</div>
+                  <div style="font-size: 0.8rem; color: #D97706; margin-bottom: 0.5rem;">
+                    {% if srv.avg_rating %}
+                      {{ srv.avg_rating|render_stars }} {{ srv.avg_rating|format_rating }}
+                    {% else %}
+                      ★ New
+                    {% endif %}
+                  </div>
+                  <a href="{% url 'service_detail' srv.id %}" class="btn btn-primary btn-sm">
+                    Book Service →
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--text-muted); text-align: center; padding: 2rem 1rem;">
+            No active services currently listed.
+          </p>
+        {% endif %}
+      </div>
+
+      <!-- Approved Customer Reviews -->
+      <div class="card">
+        <div class="card-title">
+          <span>Customer Reviews Across All Services</span>
+          <span class="badge badge-teal">{{ reviews.count }} Approved</span>
+        </div>
+
+        {% if reviews %}
+          <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+            {% for rev in reviews %}
+              <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <div>
+                    <strong>{{ rev.customer.first_name|default:rev.customer.username }}</strong>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">on <em>{{ rev.service.service_name }}</em></span>
+                  </div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">{{ rev.review_date|date:"d M Y" }}</span>
+                </div>
+
+                <div style="color: #D97706; margin-bottom: 0.35rem; font-size: 0.95rem;">
+                  {{ rev.rating|render_stars }} ({{ rev.rating }}/5)
+                </div>
+
+                <p style="color: var(--text-muted); font-size: 0.925rem; line-height: 1.6;">
+                  {{ rev.review_text }}
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="color: var(--text-muted); text-align: center; padding: 2rem 1rem;">
+            No customer reviews have been published for this provider yet.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right Column: Send Inquiry to Provider -->
+    <div>
+      <div class="card" style="position: sticky; top: 90px;">
+        <h3 class="card-title" style="margin-bottom: 0.75rem;">
+          <span>💬 Contact Provider</span>
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">
+          Send a direct message or ask about general availability to {{ provider.business_name }}.
+        </p>
+
+        {% if user.is_authenticated %}
+          {% if user.is_customer %}
+            <form method="POST" action="{% url 'provider_enquiry_create' provider.id %}">
+              {% csrf_token %}
+              <div class="form-group">
+                <label class="form-label" for="id_message">Your Message</label>
+                <textarea 
+                  name="message" 
+                  id="id_message" 
+                  rows="4" 
+                  class="form-input" 
+                  placeholder="Ask a question or explain your requirements (minimum 10 characters)..." 
+                  required 
+                  minlength="10"
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Send Inquiry to {{ provider.business_name }}
+              </button>
+            </form>
+          {% else %}
+            <div style="background: var(--warning-bg); color: #78350F; padding: 1rem; border-radius: var(--radius-md); font-size: 0.875rem;">
+              Signed in as a <strong>{{ user.get_role_display }}</strong>. Customer accounts can submit inquiries.
+            </div>
+          {% endif %}
+        {% else %}
+          <div style="text-align: center; padding: 1.5rem 0.5rem;">
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+              Please log in to contact this provider directly.
+            </p>
+            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline" style="width: 100%;">
+              Log In to Contact Provider
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

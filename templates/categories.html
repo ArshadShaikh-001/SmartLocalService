@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Service Categories - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2.5rem; padding-bottom: 4rem;">
+  <div style="text-align: center; max-width: 700px; margin: 0 auto 3rem;">
+    <span class="section-badge">Service Catalog</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.75rem;">
+      Browse by Service Category
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1.05rem;">
+      Find verified local professionals specializing in electrical work, plumbing, carpentry, deep cleaning, and appliance servicing across Pune.
+    </p>
+  </div>
+
+  <div class="category-grid">
+    {% for cat in categories %}
+      <a href="{% url 'services' %}?category={{ cat.id }}" class="category-card" style="text-align: left; align-items: flex-start; padding: 1.75rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 1rem;">
+          <div class="category-icon" style="margin-bottom: 0;">{{ cat.icon }}</div>
+          <span class="badge badge-teal">
+            {{ cat.active_services_count }} service{{ cat.active_services_count|pluralize }}
+          </span>
+        </div>
+        <h3 class="category-name" style="font-size: 1.25rem; margin-bottom: 0.5rem;">{{ cat.name }}</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1rem; flex: 1;">
+          {{ cat.description|default:"Reliable local doorstep assistance." }}
+        </p>
+        <div style="color: var(--primary); font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 0.35rem;">
+          <span>Explore Services</span>
+          <span>→</span>
+        </div>
+      </a>
+    {% empty %}
+      <div class="card" style="text-align: center; grid-column: 1 / -1; padding: 3rem;">
+        <p style="color: var(--text-muted);">No categories available at the moment.</p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
