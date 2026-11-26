@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home - Find Trusted Local Services Near You{% endblock %}
+
+{% block content %}
+<!-- ==============================================================================
+     Hero Section with Search Bar
+     ============================================================================== -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-pill">
+      <span>📍</span> Serving Pune, Narayangaon, Junnar, Hadapsar &amp; Kothrud
+    </div>
+
+    <h1 class="hero-title">
+      Smart Local Service Connect:<br>
+      <span>A Digital Platform for Finding Trusted Local Services</span>
+    </h1>
+
+    <p class="hero-tagline">
+      Discover background-verified electricians, plumbers, carpenters, and appliance experts ready to help at fair, transparent prices.
+    </p>
+
+    <!-- Search Form submitting GET request to /services/ -->
+    <div class="search-bar-card">
+      <form action="{% url 'services' %}" method="GET" class="search-form">
+        <!-- Keyword Field -->
+        <div class="search-field">
+          <span class="search-field-icon">🔍</span>
+          <input 
+            type="text" 
+            name="q" 
+            class="search-input" 
+            placeholder="What service do you need? (e.g. Wiring, Leak)"
+            aria-label="Service keyword"
+          >
+        </div>
+
+        <!-- Location Field -->
+        <div class="search-field">
+          <span class="search-field-icon">📍</span>
+          <input 
+            type="text" 
+            name="location" 
+            class="search-input" 
+            placeholder="Locality (e.g. Hadapsar, Junnar)"
+            aria-label="Location"
+          >
+        </div>
+
+        <!-- Category Dropdown -->
+        <div class="search-field">
+          <span class="search-field-icon">📂</span>
+          <select name="category" class="search-input" aria-label="Select Category">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+              <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary" style="height: 48px; padding: 0 1.5rem;">
+          Find Services
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================================================
+     Popular Categories Section
+     ============================================================================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">Explore Categories</span>
+      <h2 class="section-title">Popular Service Categories</h2>
+      <p class="section-subtitle">Choose from verified specialists offering transparent pricing and doorstep assistance.</p>
+    </div>
+
+    <div class="category-grid">
+      {% for cat in categories %}
+        <a href="{% url 'services' %}?category={{ cat.id }}" class="category-card">
+          <div class="category-icon">{{ cat.icon }}</div>
+          <h3 class="category-name">{{ cat.name }}</h3>
+          <p class="category-meta">{{ cat.service_count }} service{{ cat.service_count|pluralize }} available</p>
+        </a>
+      {% empty %}
+        <p style="text-align: center; color: var(--text-muted); grid-column: 1 / -1;">
+          No categories found. Run <code>python manage.py seed_data</code> to initialize demo records.
+        </p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================================================
+     How It Works Section
+     ============================================================================== -->
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">Simple &amp; Seamless</span>
+      <h2 class="section-title">How It Works</h2>
+      <p class="section-subtitle">Get your household problems solved in three quick and dependable steps.</p>
+    </div>
+
+    <div class="steps-grid">
+      <!-- Step 1 -->
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-icon">🔎</div>
+        <h3 class="step-title">Search &amp; Filter</h3>
+        <p class="step-desc">
+          Search by service type, locality, or category to find verified local technicians operating near your neighborhood.
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-icon">⚖️</div>
+        <h3 class="step-title">Compare &amp; Select</h3>
+        <p class="step-desc">
+          Compare provider ratings, real customer reviews, upfront starting prices, and verified badges before booking.
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-icon">📞</div>
+        <h3 class="step-title">Contact &amp; Relax</h3>
+        <p class="step-desc">
+          Schedule an appointment with your preferred date or send direct inquiries. Pay transparently once work is done.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================================================
+     Featured Services Section
+     ============================================================================== -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">Handpicked Quality</span>
+      <h2 class="section-title">Top Rated Local Services</h2>
+      <p class="section-subtitle">Verified providers with consistent 5-star customer ratings and prompt response.</p>
+    </div>
+
+    <div class="services-grid">
+      {% for srv in featured_services %}
+        <div class="service-card">
+          <div>
+            <div class="service-card-header">
+              <span class="badge badge-teal">{{ srv.category.icon }} {{ srv.category.name }}</span>
+              <span class="badge badge-success">✓ Verified</span>
+            </div>
+            <h3 class="service-card-title">{{ srv.service_name }}</h3>
+            <div class="service-provider-info">
+              <span>👤</span>
+              <strong>{{ srv.provider.business_name }}</strong>
+              <span>• {{ srv.provider.area }}</span>
+            </div>
+            <p class="service-card-desc">{{ srv.description|truncatewords:20 }}</p>
+          </div>
+
+          <div class="service-card-footer">
+            <div>
+              <span class="service-price">{{ srv.price_info }}</span>
+            </div>
+            <div class="service-rating">
+              {% if srv.average_rating %}
+                ★ {{ srv.average_rating }} ({{ srv.approved_reviews_count }})
+              {% else %}
+                <span style="color: var(--text-muted); font-size: 0.8rem;">★ New</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="text-align: center; margin-top: 2.5rem;">
+      <a href="{% url 'services' %}" class="btn btn-outline btn-lg">View All Available Services →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================================================
+     Call to Action Section
+     ============================================================================== -->
+<section class="container">
+  <div class="cta-banner">
+    <h2>Are You a Skilled Local Technician or Contractor?</h2>
+    <p>
+      Join Smart Local Service Connect to grow your customer base in your town. Get direct bookings with zero middlemen commission.
+    </p>
+    <div class="cta-buttons">
+      {% if user.is_authenticated %}
+        <a href="{% url 'dashboard_redirect' %}" class="btn btn-white btn-lg">Go to My Dashboard</a>
+      {% else %}
+        <a href="{% url 'register' %}" class="btn btn-white btn-lg">Register as Service Provider</a>
+        <a href="{% url 'login' %}" class="btn btn-outline btn-lg" style="color: #FFFFFF; border-color: #FFFFFF;">Customer Login</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

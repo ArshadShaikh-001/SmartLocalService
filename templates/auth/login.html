@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-icon" style="margin: 0 auto 0.75rem; width: 48px; height: 48px; font-size: 1.5rem;">
+        🔐
+      </div>
+      <h1 class="auth-title">Welcome Back</h1>
+      <p class="auth-subtitle">Sign in to your account with username or email</p>
+    </div>
+
+    <form method="POST" action="{% url 'login' %}">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label class="form-label" for="id_login_id">Username or Email</label>
+        {{ form.login_id }}
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <label class="form-label" for="id_password" style="margin-bottom: 0;">Password</label>
+        </div>
+        {{ form.password }}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 0.5rem;">
+        Sign In
+      </button>
+    </form>
+
+    <!-- Quick Demo Logins Helper for BCA Evaluation/Viva -->
+    <div style="margin-top: 1.75rem; padding: 0.85rem; background: #F8FAFC; border: 1px dashed var(--border-color); border-radius: var(--radius-md); font-size: 0.8rem; color: var(--text-muted);">
+      <div style="font-weight: 700; color: var(--primary-dark); margin-bottom: 0.25rem;">🔑 Quick Demo Accounts (Seed Data):</div>
+      <div><strong>Customer:</strong> <code>rahul_patil</code> / <code>demo1234</code></div>
+      <div><strong>Provider:</strong> <code>ramesh_services</code> / <code>demo1234</code></div>
+      <div><strong>Admin:</strong> <code>admin</code> / <code>admin123</code></div>
+    </div>
+
+    <div class="auth-footer">
+      Don't have an account yet? 
+      <a href="{% url 'register' %}" style="font-weight: 600;">Create an account</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

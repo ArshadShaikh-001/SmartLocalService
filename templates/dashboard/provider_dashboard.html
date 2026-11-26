@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Provider Dashboard - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+          <h1 class="dashboard-heading">{{ profile.business_name }}</h1>
+          {% if profile.verification_status == 'verified' %}
+            <span class="badge badge-success" style="font-size: 0.85rem;">✓ Verified Partner</span>
+          {% else %}
+            <span class="badge badge-warning" style="font-size: 0.85rem;">⏳ Verification Pending</span>
+          {% endif %}
+          <span class="badge {% if profile.availability_status == 'available' %}badge-teal{% else %}badge-warning{% endif %}">
+            ● {{ profile.get_availability_status_display }}
+          </span>
+        </div>
+        <p class="dashboard-subheading">
+          Service Provider: <strong>{{ user.get_full_name|default:user.username }}</strong> • 
+          Base Area: <strong>{{ profile.area }}</strong> • 
+          Experience: <strong>{{ profile.experience }} Years</strong>
+        </p>
+      </div>
+
+      <div>
+        <a href="{% url 'services' %}?location={{ profile.area }}" class="btn btn-outline">
+          View Public Listings
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container" style="padding-bottom: 4rem;">
+  <!-- Stat Metrics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🛠️</div>
+      <div>
+        <div class="stat-value">{{ stats.total_services }}</div>
+        <div class="stat-label">Active Services Listed</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">📥</div>
+      <div>
+        <div class="stat-value">{{ stats.total_requests }}</div>
+        <div class="stat-label">Total Booking Requests</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div>
+        <div class="stat-value">{{ stats.pending_requests }}</div>
+        <div class="stat-label">Pending Action</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">💬</div>
+      <div>
+        <div class="stat-value">{{ stats.total_enquiries }}</div>
+        <div class="stat-label">Customer Enquiries</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Services Listed -->
+  <div class="card">
+    <div class="card-title">
+      <span>My Service Offerings</span>
+      <span class="badge badge-teal">{{ services.count }} Listed</span>
+    </div>
+
+    {% if services %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Service Name</th>
+              <th>Category</th>
+              <th>Starting Price</th>
+              <th>Coverage Area</th>
+              <th>Avg. Rating</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for srv in services %}
+              <tr>
+                <td><strong>{{ srv.service_name }}</strong></td>
+                <td>{{ srv.category.icon }} {{ srv.category.name }}</td>
+                <td><span style="font-weight: 600; color: var(--primary-dark);">{{ srv.price_info }}</span></td>
+                <td>{{ srv.service_area }}</td>
+                <td>
+                  {% if srv.average_rating %}
+                    <span style="color: #D97706; font-weight: 700;">★ {{ srv.average_rating }}</span>
+                  {% else %}
+                    <span style="color: var(--text-muted);">New</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if srv.status == 'active' %}
+                    <span class="badge badge-success">Active</span>
+                  {% else %}
+                    <span class="badge badge-danger">Inactive</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+        <p>No services listed under your business profile yet.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Incoming Booking Requests -->
+  <div class="card">
+    <div class="card-title">
+      <span>Incoming Booking Requests</span>
+      <span class="badge badge-teal">{{ incoming_requests.count }} Total</span>
+    </div>
+
+    {% if incoming_requests %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Req #</th>
+              <th>Customer</th>
+              <th>Contact Phone</th>
+              <th>Service</th>
+              <th>Preferred Date</th>
+              <th>Customer Notes</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in incoming_requests %}
+              <tr>
+                <td>#{{ req.id }}</td>
+                <td><strong>{{ req.customer.get_full_name|default:req.customer.username }}</strong></td>
+                <td>{{ req.customer.phone|default:"-" }}</td>
+                <td>{{ req.service.service_name }}</td>
+                <td>{{ req.preferred_date|date:"d M Y" }}</td>
+                <td>{{ req.description|truncatewords:10 }}</td>
+                <td>
+                  {% if req.status == 'pending' %}
+                    <span class="badge badge-warning">Pending</span>
+                  {% elif req.status == 'accepted' %}
+                    <span class="badge badge-success">Accepted</span>
+                  {% elif req.status == 'completed' %}
+                    <span class="badge badge-teal">Completed</span>
+                  {% else %}
+                    <span class="badge badge-danger">Rejected</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+        No booking requests received yet.
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Direct Customer Enquiries -->
+  <div class="card">
+    <div class="card-title">
+      <span>Direct Inquiries</span>
+      <span class="badge badge-teal">{{ enquiries.count }} Message{{ enquiries.count|pluralize }}</span>
+    </div>
+
+    {% if enquiries %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>From</th>
+              <th>Message</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for enq in enquiries %}
+              <tr>
+                <td>{{ enq.enquiry_date|date:"d M Y" }}</td>
+                <td>{{ enq.customer.username|default:"Guest Customer" }}</td>
+                <td>{{ enq.message }}</td>
+                <td>
+                  {% if enq.status == 'new' %}
+                    <span class="badge badge-warning">New</span>
+                  {% else %}
+                    <span class="badge badge-success">Replied</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="text-align: center; padding: 1.5rem 1rem; color: var(--text-muted);">
+        No inquiries received yet.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

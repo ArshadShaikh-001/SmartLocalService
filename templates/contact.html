@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 3rem; padding-bottom: 4rem; max-width: 960px;">
+  <div style="text-align: center; margin-bottom: 3rem;">
+    <span class="section-badge">Get In Touch</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.75rem;">
+      We're Here to Help
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem;">
+      Have a question regarding service provider registration, verification, or customer support? Reach out to us.
+    </p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Contact Info Card -->
+    <div class="card">
+      <h2 class="card-title">📞 Help &amp; Support Info</h2>
+
+      <div style="margin-bottom: 1.5rem;">
+        <strong style="display: block; color: var(--text-main); margin-bottom: 0.25rem;">📍 Operational Address:</strong>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Smart Local Service Connect Platform<br>
+          BCA Project Lab, Pune Region<br>
+          Maharashtra, India - 411038
+        </p>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <strong style="display: block; color: var(--text-main); margin-bottom: 0.25rem;">✉️ Support Email:</strong>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          <a href="mailto:support@smartlocalservice.local">support@smartlocalservice.local</a>
+        </p>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <strong style="display: block; color: var(--text-main); margin-bottom: 0.25rem;">🕒 Operating Hours:</strong>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">
+          Monday to Saturday: 8:00 AM – 8:00 PM<br>
+          Sunday: 9:00 AM – 2:00 PM (Emergency Technician Support)
+        </p>
+      </div>
+
+      <div style="background: var(--primary-light); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--primary-border);">
+        <strong style="color: var(--primary-dark); font-size: 0.9rem;">💡 Quick Tip for Providers:</strong>
+        <p style="color: var(--primary-dark); font-size: 0.85rem; margin-top: 0.25rem;">
+          If you are a technician applying for verification, ensure your workshop address and contact phone are valid.
+        </p>
+      </div>
+    </div>
+
+    <!-- Contact Form Card -->
+    <div class="card">
+      <h2 class="card-title">💬 Send a Message</h2>
+      <form method="POST" action="{% url 'contact' %}">
+        {% csrf_token %}
+        <div class="form-group">
+          <label class="form-label" for="name">Your Name</label>
+          <input type="text" id="name" name="name" class="form-input" placeholder="e.g. Anand Kulkarni" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input type="email" id="email" name="email" class="form-input" placeholder="e.g. anand@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="message">Message / Enquiry</label>
+          <textarea id="message" name="message" rows="4" class="form-input" placeholder="Describe your query or requirement..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          Submit Message
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

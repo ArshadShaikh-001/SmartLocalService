@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">System Administration 🛡️</h1>
+        <p class="dashboard-subheading">Platform Management Portal • Monitor verifications, services, and activity</p>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <a href="/admin/" target="_blank" class="btn btn-primary">
+          <span>⚙️</span> Open Django Admin Site
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container" style="padding-bottom: 4rem;">
+  <!-- Platform Metrics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-value">{{ metrics.total_users }}</div>
+        <div class="stat-label">Total Registered Users</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">🏬</div>
+      <div>
+        <div class="stat-value">{{ metrics.total_providers }}</div>
+        <div class="stat-label">Service Providers</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">🛠️</div>
+      <div>
+        <div class="stat-value">{{ metrics.total_services }}</div>
+        <div class="stat-label">Live Services</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div>
+        <div class="stat-value" style="color: var(--warning);">{{ metrics.pending_verifications }}</div>
+        <div class="stat-label">Pending Providers</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon">💬</div>
+      <div>
+        <div class="stat-value" style="color: var(--info);">{{ metrics.pending_reviews }}</div>
+        <div class="stat-label">Reviews for Moderation</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Recent Users -->
+    <div class="card">
+      <div class="card-title">
+        <span>Recent User Signups</span>
+        <a href="/admin/core/user/" class="btn btn-outline btn-sm">Manage All</a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Phone</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in recent_users %}
+              <tr>
+                <td><strong>{{ u.username }}</strong></td>
+                <td><span class="badge badge-teal">{{ u.get_role_display }}</span></td>
+                <td>{{ u.phone|default:"-" }}</td>
+                <td>
+                  {% if u.is_active %}
+                    <span class="badge badge-success">Active</span>
+                  {% else %}
+                    <span class="badge badge-danger">Disabled</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">No users found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Service Requests -->
+    <div class="card">
+      <div class="card-title">
+        <span>Recent Service Requests</span>
+        <a href="/admin/core/servicerequest/" class="btn btn-outline btn-sm">Manage All</a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for req in recent_requests %}
+              <tr>
+                <td>#{{ req.id }}</td>
+                <td>{{ req.customer.username }}</td>
+                <td>{{ req.service.service_name|truncatewords:4 }}</td>
+                <td>
+                  {% if req.status == 'pending' %}
+                    <span class="badge badge-warning">Pending</span>
+                  {% elif req.status == 'accepted' %}
+                    <span class="badge badge-success">Accepted</span>
+                  {% elif req.status == 'completed' %}
+                    <span class="badge badge-teal">Completed</span>
+                  {% else %}
+                    <span class="badge badge-danger">Rejected</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">No requests yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

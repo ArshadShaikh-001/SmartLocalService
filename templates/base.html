@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Smart Local Service Connect - Find and connect with trusted local technicians, plumbers, electricians, and service professionals.">
+  <title>{% block title %}Smart Local Service Connect{% endblock %} | Trusted Local Services</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="{% url 'home' %}" class="brand">
+        <span class="brand-icon">🛠️</span>
+        <span>SmartLocal<span style="color: var(--primary);">Service</span></span>
+      </a>
+
+      <!-- Mobile Hamburger Toggle -->
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        ☰
+      </button>
+
+      <!-- Nav Menu Items -->
+      <nav class="nav-menu" id="navMenu">
+        <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
+        <a href="{% url 'services' %}" class="nav-link {% if request.resolver_match.url_name == 'services' %}active{% endif %}">Services</a>
+        <a href="{% url 'about' %}" class="nav-link {% if request.resolver_match.url_name == 'about' %}active{% endif %}">About</a>
+        <a href="{% url 'contact' %}" class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}">Contact</a>
+
+        <div class="nav-auth">
+          {% if user.is_authenticated %}
+            <a href="{% url 'dashboard_redirect' %}" class="btn btn-outline btn-sm">
+              <span>👤</span>
+              <span>{{ user.first_name|default:user.username }}</span>
+              <span class="badge badge-teal" style="font-size: 0.7rem;">{{ user.get_role_display }}</span>
+            </a>
+            <a href="{% url 'logout' %}" class="btn btn-secondary btn-sm">Logout</a>
+          {% else %}
+            <a href="{% url 'login' %}" class="btn btn-secondary btn-sm">Login</a>
+            <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Register</a>
+          {% endif %}
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Django Messages Framework -->
+  <div class="container">
+    {% if messages %}
+      <div class="alert-container">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Main Content Block -->
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-about">
+          <div class="brand" style="margin-bottom: 0.75rem;">
+            <span class="brand-icon">🛠️</span>
+            <span>SmartLocal<span style="color: var(--primary);">Service</span></span>
+          </div>
+          <p>
+            A digital platform connecting verified local service technicians with customers across Pune and nearby regions. Fast, reliable, and transparent.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Quick Links</h4>
+          <ul class="footer-links">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'services' %}">All Services</a></li>
+            <li><a href="{% url 'about' %}">About Project</a></li>
+            <li><a href="{% url 'contact' %}">Contact Support</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">For Providers</h4>
+          <ul class="footer-links">
+            <li><a href="{% url 'register' %}">Join as Service Partner</a></li>
+            <li><a href="{% url 'login' %}">Provider Login</a></li>
+            <li><a href="{% url 'about' %}">Verification Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-heading">Project Info</h4>
+          <ul class="footer-links">
+            <li style="color: var(--text-muted); font-size: 0.9rem;">BCA Mini Project</li>
+            <li style="color: var(--text-muted); font-size: 0.9rem;">Python Django 6 &amp; SQLite</li>
+            <li style="color: var(--text-muted); font-size: 0.9rem;">Coverage: Pune &amp; Rural Suburbs</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 Smart Local Service Connect. All rights reserved.</div>
+        <div>Developed for BCA Mini Project Examination</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{% static 'js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

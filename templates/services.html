@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Explore Local Services{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 2rem; padding-bottom: 3rem;">
+  <!-- Header / Breadcrumb -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 2rem; font-weight: 800; color: var(--text-main);">Find Local Services</h1>
+    <p style="color: var(--text-muted);">
+      Showing {{ results_count }} service{{ results_count|pluralize }} available in your selected criteria
+    </p>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="card" style="padding: 1.25rem; margin-bottom: 2rem;">
+    <form action="{% url 'services' %}" method="GET" class="search-form">
+      <div class="search-field">
+        <span class="search-field-icon">🔍</span>
+        <input 
+          type="text" 
+          name="q" 
+          value="{{ query }}" 
+          class="search-input" 
+          placeholder="Keyword (e.g. Electrician, Tap, AC)"
+        >
+      </div>
+
+      <div class="search-field">
+        <span class="search-field-icon">📍</span>
+        <input 
+          type="text" 
+          name="location" 
+          value="{{ location }}" 
+          class="search-input" 
+          placeholder="Location / Area (e.g. Pune, Junnar)"
+        >
+      </div>
+
+      <div class="search-field">
+        <span class="search-field-icon">📂</span>
+        <select name="category" class="search-input">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"s" %}selected{% endif %}>
+              {{ cat.icon }} {{ cat.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="height: 46px;">
+        Filter
+      </button>
+    </form>
+  </div>
+
+  <!-- Services Grid -->
+  {% if services %}
+    <div class="services-grid">
+      {% for srv in services %}
+        <div class="service-card">
+          <div>
+            <div class="service-card-header">
+              <span class="badge badge-teal">{{ srv.category.icon }} {{ srv.category.name }}</span>
+              {% if srv.provider.verification_status == 'verified' %}
+                <span class="badge badge-success">✓ Verified</span>
+              {% else %}
+                <span class="badge badge-warning">⏳ Under Verification</span>
+              {% endif %}
+            </div>
+
+            <h3 class="service-card-title">{{ srv.service_name }}</h3>
+
+            <div class="service-provider-info">
+              <span>🏢</span>
+              <strong>{{ srv.provider.business_name }}</strong>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              <span>📍 Coverage: {{ srv.service_area }}</span>
+            </div>
+
+            <p class="service-card-desc">{{ srv.description }}</p>
+          </div>
+
+          <div class="service-card-footer">
+            <div>
+              <div class="service-price">{{ srv.price_info }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Exp: {{ srv.provider.experience }} years</div>
+            </div>
+
+            <div style="text-align: right;">
+              <div class="service-rating">
+                {% if srv.average_rating %}
+                  ★ {{ srv.average_rating }} / 5.0
+                {% else %}
+                  <span style="color: var(--text-muted); font-size: 0.8rem;">★ New</span>
+                {% endif %}
+              </div>
+              {% if user.is_authenticated and user.role == 'customer' %}
+                <span class="badge badge-teal" style="margin-top: 0.35rem;">Ready to Book</span>
+              {% else %}
+                <a href="{% url 'login' %}?next={% url 'services' %}" class="btn btn-primary btn-sm" style="margin-top: 0.35rem;">Book</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 4rem 2rem;">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">No Services Found</h3>
+      <p style="color: var(--text-muted); max-width: 450px; margin: 0 auto 1.5rem;">
+        We could not find any active services matching your query. Try resetting your search filters or check nearby towns.
+      </p>
+      <a href="{% url 'services' %}" class="btn btn-primary">Clear Filters</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

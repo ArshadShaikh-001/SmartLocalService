@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}About Us - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: 3rem; padding-bottom: 4rem; max-width: 900px;">
+  <div style="text-align: center; margin-bottom: 3rem;">
+    <span class="section-badge">Academic Project Overview</span>
+    <h1 style="font-size: 2.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.75rem;">
+      Smart Local Service Connect
+    </h1>
+    <p style="color: var(--text-muted); font-size: 1.1rem;">
+      A Digital Platform for Finding Trusted Local Services — Bachelor of Computer Applications (BCA) Mini Project.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 class="card-title">📖 Project Problem Statement &amp; Vision</h2>
+    <p style="color: var(--text-muted); line-height: 1.8; margin-bottom: 1.25rem;">
+      Finding reliable, skilled, and honest service professionals (such as electricians, plumbers, carpenters, and appliance mechanics) in semi-urban and tier-2/tier-3 localities around Pune (like Junnar, Narayangaon, Vadgaon Sahani, Hadapsar, and Kothrud) has historically relied on fragmented word-of-mouth. Customers face unpredictable charges, untrusted strangers, and lack of accountability.
+    </p>
+    <p style="color: var(--text-muted); line-height: 1.8;">
+      <strong>Smart Local Service Connect</strong> bridges this gap by offering a transparent, centralized web application where verified local service providers can display their services, price indications, and service areas, while customers can search, compare, and connect with confidence.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom: 2rem;">
+    <h2 class="card-title">🎯 Core Objectives</h2>
+    <ul style="padding-left: 1.25rem; color: var(--text-muted); line-height: 1.8;">
+      <li><strong>Verified Service Providers:</strong> Prevent unvetted listings through administrative identity verification.</li>
+      <li><strong>Transparent Pricing:</strong> Providers specify price guidelines upfront, reducing ambiguity and hidden charges.</li>
+      <li><strong>Role-Based Access Control (RBAC):</strong> Clean segregation between Customers, Service Providers, and System Administrators.</li>
+      <li><strong>Genuine Customer Reviews:</strong> Moderated feedback system to maintain community trust and prevent fraudulent spam.</li>
+      <li><strong>Mobile-First Accessibility:</strong> Pure CSS, lightweight and fast loading on mobile phones with zero bloatware.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">💻 Technical Architecture</h2>
+    <div class="table-responsive">
+      <table class="table">
+        <tbody>
+          <tr>
+            <td style="font-weight: 600; width: 35%;">Backend Framework</td>
+            <td>Python Django (latest stable 6.x) with Model-View-Template (MVT) Architecture</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Database</td>
+            <td>SQLite (Development/Demo) &amp; Modular settings ready for MySQL in production</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Frontend Technologies</td>
+            <td>Semantic HTML5, Responsive Custom CSS3 (Flexbox &amp; Grid), Vanilla JavaScript</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600;">Security Measures</td>
+            <td>Django CSRF protection, PBKDF2 password hashing, SQL injection immunity via ORM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
