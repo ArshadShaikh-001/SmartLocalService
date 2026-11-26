@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Platform Bookings - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">All Platform Service Bookings</h1>
+        <p class="dashboard-subheading">Read-only audit log of all customer appointments across all service providers</p>
+      </div>
+
+      <!-- Status Filter Tabs -->
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'admin_requests' %}" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          All
+        </a>
+        <a href="{% url 'admin_requests' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Pending
+        </a>
+        <a href="{% url 'admin_requests' %}?status=accepted" class="btn {% if status_filter == 'accepted' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Accepted
+        </a>
+        <a href="{% url 'admin_requests' %}?status=completed" class="btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Completed
+        </a>
+        <a href="{% url 'admin_requests' %}?status=cancelled" class="btn {% if status_filter == 'cancelled' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Cancelled
+        </a>
+        <a href="{% url 'admin_requests' %}?status=rejected" class="btn {% if status_filter == 'rejected' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Rejected
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Booking Records</span>
+          <span class="badge badge-teal">{{ requests.count }} Record{{ requests.count|pluralize }}</span>
+        </div>
+
+        {% if requests %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Req #</th>
+                  <th>Customer</th>
+                  <th>Service</th>
+                  <th>Provider</th>
+                  <th>Preferred Date</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in requests %}
+                  <tr>
+                    <td><strong>#{{ req.id }}</strong></td>
+                    <td>
+                      <div><strong>{{ req.customer.get_full_name|default:req.customer.username }}</strong></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        📞 {{ req.customer.phone|default:"No phone" }} • @{{ req.customer.username }}
+                      </div>
+                    </td>
+                    <td><strong>{{ req.service.service_name }}</strong></td>
+                    <td>
+                      <div>{{ req.service.provider.business_name }}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">📍 {{ req.service.provider.area }}</div>
+                    </td>
+                    <td>
+                      <div>{{ req.preferred_date|date:"d M Y" }}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">Recv: {{ req.request_date|date:"d M Y" }}</div>
+                    </td>
+                    <td style="max-width: 250px;">
+                      <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">
+                        {{ req.description }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <span class="badge badge-warning">Pending</span>
+                      {% elif req.status == 'accepted' %}
+                        <span class="badge badge-success">Accepted</span>
+                      {% elif req.status == 'completed' %}
+                        <span class="badge badge-teal">Completed</span>
+                      {% elif req.status == 'cancelled' %}
+                        <span class="badge badge-danger">Cancelled</span>
+                      {% else %}
+                        <span class="badge badge-danger">Rejected</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No bookings matching this filter.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

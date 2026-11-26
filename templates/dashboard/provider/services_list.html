@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Manage Services - Provider Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">My Service Offerings</h1>
+        <p class="dashboard-subheading">Manage your service listings, pricing, and active statuses</p>
+      </div>
+      <div>
+        <a href="{% url 'provider_service_add' %}" class="btn btn-primary">
+          <span>➕</span> Add New Service
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Listed Services</span>
+          <span class="badge badge-teal">{{ services.count }} Total</span>
+        </div>
+
+        {% if services %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Service Name</th>
+                  <th>Category</th>
+                  <th>Price Info</th>
+                  <th>Coverage Area</th>
+                  <th>Rating</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for srv in services %}
+                  <tr>
+                    <td>
+                      <strong style="color: var(--text-main); font-size: 0.95rem;">
+                        {{ srv.service_name }}
+                      </strong>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        {{ srv.description|truncatewords:8 }}
+                      </div>
+                    </td>
+                    <td>{{ srv.category.icon }} {{ srv.category.name }}</td>
+                    <td><strong style="color: var(--primary-dark);">{{ srv.price_info }}</strong></td>
+                    <td>{{ srv.service_area|truncatewords:4 }}</td>
+                    <td>
+                      {% if srv.avg_rating %}
+                        <span style="color: #D97706; font-weight: 700;">★ {{ srv.avg_rating|format_rating }}</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">({{ srv.review_count }})</span>
+                      {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">New</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if srv.status == 'active' %}
+                        <span class="badge badge-success">Active</span>
+                      {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                        <!-- Edit Button -->
+                        <a href="{% url 'provider_service_edit' srv.id %}" class="btn btn-secondary btn-xs" title="Edit this service">
+                          Edit
+                        </a>
+
+                        <!-- Activate / Deactivate Toggle -->
+                        <form method="POST" action="{% url 'provider_service_toggle_status' srv.id %}" style="display: inline;" onsubmit="return confirm('Toggle status for this service?');">
+                          {% csrf_token %}
+                          {% if srv.status == 'active' %}
+                            <button type="submit" class="btn btn-secondary btn-xs" style="color: var(--warning);" title="Deactivate service">
+                              Deactivate
+                            </button>
+                          {% else %}
+                            <button type="submit" class="btn btn-success-outline btn-xs" title="Activate service">
+                              Activate
+                            </button>
+                          {% endif %}
+                        </form>
+
+                        <!-- Delete Button with confirm() -->
+                        <form method="POST" action="{% url 'provider_service_delete' srv.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to permanently delete \'{{ srv.service_name|escapejs }}\'?');">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-danger-outline btn-xs" title="Delete service">
+                            Delete
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <p style="font-size: 1.1rem; margin-bottom: 1rem;">You have not created any service offerings yet.</p>
+            <a href="{% url 'provider_service_add' %}" class="btn btn-primary btn-sm">Add Your First Service</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

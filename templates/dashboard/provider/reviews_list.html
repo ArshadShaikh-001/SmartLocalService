@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Customer Reviews - Provider Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Customer Reviews &amp; Feedback</h1>
+        <p class="dashboard-subheading">Read-only list of approved customer reviews published on your service listings</p>
+      </div>
+      <div>
+        <div style="background: var(--primary-light); border: 1px solid var(--primary-border); padding: 0.5rem 1rem; border-radius: var(--radius-md);">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Overall Rating:</span>
+          <strong style="color: #D97706; margin-left: 0.35rem;">
+            {% if profile.average_rating %}
+              {{ profile.stars }} {{ profile.average_rating|format_rating }} / 5.0
+            {% else %}
+              New
+            {% endif %}
+          </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Approved Reviews</span>
+          <span class="badge badge-teal">{{ reviews.count }} Total</span>
+        </div>
+
+        {% if reviews %}
+          <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            {% for rev in reviews %}
+              <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                  <div>
+                    <strong style="color: var(--text-main); font-size: 1rem;">
+                      {{ rev.customer.get_full_name|default:rev.customer.username }}
+                    </strong>
+                    <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">
+                      on <em>{{ rev.service.service_name }}</em>
+                    </span>
+                  </div>
+                  <span style="font-size: 0.8rem; color: var(--text-muted);">
+                    {{ rev.review_date|date:"d M Y" }}
+                  </span>
+                </div>
+
+                <div style="color: #D97706; font-size: 1rem; margin-bottom: 0.35rem;">
+                  {{ rev.rating|render_stars }} ({{ rev.rating }}/5)
+                </div>
+
+                <p style="color: var(--text-muted); font-size: 0.925rem; line-height: 1.6;">
+                  "{{ rev.review_text }}"
+                </p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No reviews have been published yet. Customer reviews appear here once verified and approved by the admin.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

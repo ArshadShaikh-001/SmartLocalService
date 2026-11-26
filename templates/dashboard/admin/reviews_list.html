@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Moderate Reviews - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Review Moderation Queue</h1>
+        <p class="dashboard-subheading">Approve genuine feedback or reject spam and policy-violating reviews</p>
+      </div>
+
+      <!-- Filter Buttons -->
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'admin_reviews' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Pending Approval
+        </a>
+        <a href="{% url 'admin_reviews' %}?status=approved" class="btn {% if status_filter == 'approved' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Approved
+        </a>
+        <a href="{% url 'admin_reviews' %}?status=rejected" class="btn {% if status_filter == 'rejected' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Rejected
+        </a>
+        <a href="{% url 'admin_reviews' %}?status=all" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          All
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Reviews (Filter: {{ status_filter|title }})</span>
+          <span class="badge badge-teal">{{ reviews.count }} Item{{ reviews.count|pluralize }}</span>
+        </div>
+
+        {% if reviews %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date &amp; Rating</th>
+                  <th>Customer</th>
+                  <th>Service &amp; Provider</th>
+                  <th>Customer Review Text</th>
+                  <th>Status</th>
+                  <th>Moderation Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rev in reviews %}
+                  <tr>
+                    <td>
+                      <div style="color: #D97706; font-weight: 700;">
+                        {{ rev.rating|render_stars }} ({{ rev.rating }}/5)
+                      </div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        {{ rev.review_date|date:"d M Y, h:i A" }}
+                      </div>
+                    </td>
+                    <td>
+                      <strong>{{ rev.customer.get_full_name|default:rev.customer.username }}</strong>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">@{{ rev.customer.username }}</div>
+                    </td>
+                    <td>
+                      <div><strong>{{ rev.service.service_name }}</strong></div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        By {{ rev.service.provider.business_name }}
+                      </div>
+                    </td>
+                    <td style="max-width: 320px;">
+                      <div style="font-size: 0.9rem; line-height: 1.4; color: var(--text-main);">
+                        "{{ rev.review_text }}"
+                      </div>
+                    </td>
+                    <td>
+                      {% if rev.moderation_status == 'approved' %}
+                        <span class="badge badge-success">✓ Approved</span>
+                      {% elif rev.moderation_status == 'pending' %}
+                        <span class="badge badge-warning">⏳ Pending</span>
+                      {% else %}
+                        <span class="badge badge-danger">Rejected</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 0.35rem;">
+                        {% if rev.moderation_status != 'approved' %}
+                          <form method="POST" action="{% url 'admin_review_moderate' rev.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="approve">
+                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+                            <button type="submit" class="btn btn-success-outline btn-xs" title="Approve review">
+                              Approve
+                            </button>
+                          </form>
+                        {% endif %}
+
+                        {% if rev.moderation_status != 'rejected' %}
+                          <form method="POST" action="{% url 'admin_review_moderate' rev.id %}" onsubmit="return confirm('Reject this customer review?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+                            <input type="hidden" name="status_filter" value="{{ status_filter }}">
+                            <button type="submit" class="btn btn-danger-outline btn-xs" title="Reject review">
+                              Reject
+                            </button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No reviews matching this status filter.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

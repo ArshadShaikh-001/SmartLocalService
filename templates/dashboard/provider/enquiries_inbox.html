@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Client Inquiries - Provider Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Client Inquiries</h1>
+        <p class="dashboard-subheading">Respond to questions and quote requests sent by potential customers</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Direct Inquiries</span>
+          <span class="badge badge-teal">{{ enquiries.count }} Total</span>
+        </div>
+
+        {% if enquiries %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date &amp; Time</th>
+                  <th>Customer Details</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for enq in enquiries %}
+                  <tr>
+                    <td>{{ enq.enquiry_date|date:"d M Y, h:i A" }}</td>
+                    <td>
+                      <div style="font-weight: 700;">
+                        {{ enq.customer.get_full_name|default:enq.customer.username }}
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        📞 <a href="tel:{{ enq.customer.phone }}">{{ enq.customer.phone|default:"No phone" }}</a>
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        ✉️ <a href="mailto:{{ enq.customer.email }}">{{ enq.customer.email }}</a>
+                      </div>
+                    </td>
+                    <td style="max-width: 380px;">
+                      <div style="font-size: 0.9rem; line-height: 1.5; color: var(--text-main);">
+                        {{ enq.message }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if enq.status == 'new' %}
+                        <span class="badge badge-warning">● New</span>
+                      {% else %}
+                        <span class="badge badge-success">✓ Replied</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if enq.status == 'new' %}
+                        <form method="POST" action="{% url 'provider_enquiry_reply' enq.id %}">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-outline btn-xs">
+                            Mark as Replied
+                          </button>
+                        </form>
+                      {% else %}
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">Resolved</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No customer inquiries received yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

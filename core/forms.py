@@ -279,3 +279,83 @@ class CustomerProfileForm(forms.ModelForm):
         if len(digits) < 10:
             raise ValidationError("Please provide a valid phone number with at least 10 digits.")
         return phone
+
+
+class ProviderProfileForm(forms.ModelForm):
+    """
+    Form for Service Providers to update their business profile and phone number.
+    """
+    phone = forms.CharField(
+        max_length=15,
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Phone Number'}),
+        label="Phone Number"
+    )
+
+    class Meta:
+        from .models import ServiceProvider
+        model = ServiceProvider
+        fields = ['business_name', 'experience', 'address', 'area', 'description']
+        widgets = {
+            'business_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Business / Trade Name'}),
+            'experience': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
+            'address': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Workshop / Office / Residence address'}),
+            'area': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Vadgaon Sahani, Pune'}),
+            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Brief description of your skills, specialty or certifications'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and hasattr(self.instance, 'user') and self.instance.user:
+            self.fields['phone'].initial = self.instance.user.phone
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone', '').strip()
+        digits = ''.join(c for c in phone if c.isdigit())
+        if len(digits) < 10:
+            raise ValidationError("Please provide a valid phone number with at least 10 digits.")
+        return phone
+
+
+class ServiceForm(forms.ModelForm):
+    """
+    ModelForm for Service Providers to Add or Edit their Services.
+    """
+    class Meta:
+        from .models import Service
+        model = Service
+        fields = ['category', 'service_name', 'price_info', 'service_area', 'description']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-input form-select'}),
+            'service_name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Fan & Switchboard Wiring'}),
+            'price_info': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Rs 300 onwards'}),
+            'service_area': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Hadapsar, Magarpatta'}),
+            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Describe what is included in this service (min 10 characters)...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        from .models import ServiceCategory
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = ServiceCategory.objects.filter(status='active')
+
+    def clean_description(self):
+        desc = self.cleaned_data.get('description', '').strip()
+        if len(desc) < 10:
+            raise ValidationError("Please provide at least 10 characters describing the service.")
+        return desc
+
+
+class CategoryForm(forms.ModelForm):
+    """
+    ModelForm for Administrator to Add or Edit Service Categories.
+    """
+    class Meta:
+        from .models import ServiceCategory
+        model = ServiceCategory
+        fields = ['name', 'icon', 'description', 'status']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Category Name (e.g. Pest Control)'}),
+            'icon': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Emoji icon (e.g. 🐜, 💡)'}),
+            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 3, 'placeholder': 'Category description'}),
+            'status': forms.Select(attrs={'class': 'form-input form-select'}),
+        }

@@ -1,0 +1,57 @@
+<!-- Provider Dashboard Sidebar Navigation -->
+<aside class="dashboard-sidebar">
+  <div class="dashboard-sidebar-header">
+    <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 0.25rem;">
+      {{ profile.business_name|truncatewords:4 }}
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.35rem;">
+      {% if profile.verification_status == 'verified' %}
+        <span class="badge badge-success" style="font-size: 0.7rem;">✓ Verified</span>
+      {% else %}
+        <span class="badge badge-warning" style="font-size: 0.7rem;">⏳ Pending</span>
+      {% endif %}
+      <span class="badge {% if profile.availability_status == 'available' %}badge-teal{% else %}badge-warning{% endif %}" style="font-size: 0.7rem;">
+        ● {{ profile.get_availability_status_display }}
+      </span>
+    </div>
+  </div>
+
+  <ul class="dashboard-sidebar-menu">
+    <li>
+      <a href="{% url 'provider_dashboard' %}" class="dashboard-sidebar-link {% if active_tab == 'overview' %}active{% endif %}">
+        <span class="menu-icon">📊</span>
+        <span>Dashboard Overview</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'provider_services' %}" class="dashboard-sidebar-link {% if active_tab == 'services' %}active{% endif %}">
+        <span class="menu-icon">🛠️</span>
+        <span>My Services</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'provider_requests' %}" class="dashboard-sidebar-link {% if active_tab == 'requests' %}active{% endif %}">
+        <span class="menu-icon">📥</span>
+        <span>Booking Requests</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'provider_enquiries' %}" class="dashboard-sidebar-link {% if active_tab == 'enquiries' %}active{% endif %}">
+        <span class="menu-icon">💬</span>
+        <span>Client Inquiries</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'provider_reviews' %}" class="dashboard-sidebar-link {% if active_tab == 'reviews' %}active{% endif %}">
+        <span class="menu-icon">⭐</span>
+        <span>Customer Reviews</span>
+      </a>
+    </li>
+    <li style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+      <a href="{% url 'provider_profile' profile.id %}" target="_blank" class="dashboard-sidebar-link" style="color: var(--primary);">
+        <span class="menu-icon">🌐</span>
+        <span>View Public Profile ↗</span>
+      </a>
+    </li>
+  </ul>
+</aside>

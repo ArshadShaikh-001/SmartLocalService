@@ -997,3 +997,129 @@ img {
     align-items: flex-start;
   }
 }
+
+
+/* ==============================================================================
+   Sidebar Dashboard Layout (Provider & Admin Portals)
+   ============================================================================== */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 2rem;
+  align-items: start;
+  margin-top: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.dashboard-sidebar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 90px;
+}
+
+.dashboard-sidebar-header {
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dashboard-sidebar-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.dashboard-sidebar-menu {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.dashboard-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-size: 0.925rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.dashboard-sidebar-link:hover {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.dashboard-sidebar-link.active {
+  background: var(--primary);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.dashboard-sidebar-link .menu-icon {
+  font-size: 1.1rem;
+}
+
+.dashboard-content {
+  min-width: 0;
+}
+
+.btn-xs {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.775rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-danger-outline {
+  background: transparent;
+  border-color: #FECACA;
+  color: var(--danger);
+}
+
+.btn-danger-outline:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.btn-success-outline {
+  background: transparent;
+  border-color: #BBF7D0;
+  color: var(--success);
+}
+
+.btn-success-outline:hover {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .dashboard-sidebar {
+    position: static;
+  }
+
+  .dashboard-sidebar-menu {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .dashboard-sidebar-link {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.75rem;
+  }
+}

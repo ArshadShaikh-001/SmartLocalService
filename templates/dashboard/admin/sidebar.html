@@ -1,0 +1,68 @@
+<!-- Administrator Dashboard Sidebar Navigation -->
+<aside class="dashboard-sidebar">
+  <div class="dashboard-sidebar-header">
+    <div style="font-weight: 700; color: var(--text-main); font-size: 1rem; margin-bottom: 0.25rem;">
+      Administration 🛡️
+    </div>
+    <div style="font-size: 0.75rem; color: var(--text-muted);">
+      Signed in as: <strong>{{ user.username }}</strong>
+    </div>
+  </div>
+
+  <ul class="dashboard-sidebar-menu">
+    <li>
+      <a href="{% url 'admin_dashboard' %}" class="dashboard-sidebar-link {% if active_tab == 'overview' %}active{% endif %}">
+        <span class="menu-icon">📊</span>
+        <span>Overview &amp; Stats</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_users' %}" class="dashboard-sidebar-link {% if active_tab == 'users' %}active{% endif %}">
+        <span class="menu-icon">👥</span>
+        <span>Manage Users</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_providers' %}" class="dashboard-sidebar-link {% if active_tab == 'providers' %}active{% endif %}">
+        <span class="menu-icon">🏬</span>
+        <span>Verify Providers</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_categories' %}" class="dashboard-sidebar-link {% if active_tab == 'categories' %}active{% endif %}">
+        <span class="menu-icon">📂</span>
+        <span>Service Categories</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_services' %}" class="dashboard-sidebar-link {% if active_tab == 'services' %}active{% endif %}">
+        <span class="menu-icon">🛠️</span>
+        <span>Moderate Services</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_reviews' %}" class="dashboard-sidebar-link {% if active_tab == 'reviews' %}active{% endif %}">
+        <span class="menu-icon">⭐</span>
+        <span>Moderate Reviews</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_requests' %}" class="dashboard-sidebar-link {% if active_tab == 'requests' %}active{% endif %}">
+        <span class="menu-icon">📥</span>
+        <span>All Booking Requests</span>
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin_enquiries' %}" class="dashboard-sidebar-link {% if active_tab == 'enquiries' %}active{% endif %}">
+        <span class="menu-icon">💬</span>
+        <span>All Client Inquiries</span>
+      </a>
+    </li>
+    <li style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+      <a href="/admin/" target="_blank" class="dashboard-sidebar-link" style="color: var(--primary);">
+        <span class="menu-icon">⚙️</span>
+        <span>Django Admin Site ↗</span>
+      </a>
+    </li>
+  </ul>
+</aside>

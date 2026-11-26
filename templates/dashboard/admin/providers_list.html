@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Verify Providers - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Service Provider Verification</h1>
+        <p class="dashboard-subheading">Review technician profiles and grant verified partner status</p>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="{% url 'admin_providers' %}" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          All
+        </a>
+        <a href="{% url 'admin_providers' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Pending Verification
+        </a>
+        <a href="{% url 'admin_providers' %}?status=verified" class="btn {% if status_filter == 'verified' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Verified
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Service Provider Profiles</span>
+          <span class="badge badge-teal">{{ providers.count }} Provider{{ providers.count|pluralize }}</span>
+        </div>
+
+        {% if providers %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Business Name &amp; User</th>
+                  <th>Area / Hub</th>
+                  <th>Exp</th>
+                  <th>Services</th>
+                  <th>Status</th>
+                  <th>Verification Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in providers %}
+                  <tr>
+                    <td>
+                      <strong style="font-size: 0.95rem; color: var(--text-main);">
+                        <a href="{% url 'provider_profile' p.id %}" target="_blank">
+                          {{ p.business_name }} ↗
+                        </a>
+                      </strong>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        Owner: {{ p.user.get_full_name|default:p.user.username }} (@{{ p.user.username }})
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        📞 {{ p.user.phone|default:"No phone" }} • ✉️ {{ p.user.email }}
+                      </div>
+                    </td>
+                    <td>
+                      <div><strong>{{ p.area }}</strong></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">{{ p.address|truncatewords:6 }}</div>
+                    </td>
+                    <td>{{ p.experience }} yrs</td>
+                    <td>
+                      <span class="badge badge-teal">{{ p.services.count }}</span>
+                    </td>
+                    <td>
+                      {% if p.verification_status == 'verified' %}
+                        <span class="badge badge-success">✓ Verified</span>
+                      {% else %}
+                        <span class="badge badge-warning">⏳ Pending</span>
+                      {% endif %}
+                      <div style="margin-top: 0.25rem;">
+                        <span class="badge {% if p.availability_status == 'available' %}badge-teal{% else %}badge-warning{% endif %}" style="font-size: 0.65rem;">
+                          ● {{ p.get_availability_status_display }}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <form method="POST" action="{% url 'admin_provider_toggle_verification' p.id %}" onsubmit="return confirm('{% if p.verification_status == 'verified' %}Revert {{ p.business_name|escapejs }} to Pending? (Services will be hidden){% else %}Verify {{ p.business_name|escapejs }}? (Services will become visible){% endif %}');">
+                        {% csrf_token %}
+                        {% if p.verification_status == 'verified' %}
+                          <button type="submit" class="btn btn-secondary btn-xs" style="color: var(--warning);">
+                            Unverify
+                          </button>
+                        {% else %}
+                          <button type="submit" class="btn btn-primary btn-xs">
+                            Verify Partner
+                          </button>
+                        {% endif %}
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No service providers found.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

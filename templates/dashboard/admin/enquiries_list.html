@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}All Platform Inquiries - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">All Platform Client Inquiries</h1>
+        <p class="dashboard-subheading">Read-only audit of questions and communications between customers and service providers</p>
+      </div>
+
+      <!-- Status Filters -->
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="{% url 'admin_enquiries' %}" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          All
+        </a>
+        <a href="{% url 'admin_enquiries' %}?status=new" class="btn {% if status_filter == 'new' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          New
+        </a>
+        <a href="{% url 'admin_enquiries' %}?status=replied" class="btn {% if status_filter == 'replied' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Replied
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Inquiry Messages</span>
+          <span class="badge badge-teal">{{ enquiries.count }} Message{{ enquiries.count|pluralize }}</span>
+        </div>
+
+        {% if enquiries %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Enquiry #</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Target Provider</th>
+                  <th>Message Content</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for enq in enquiries %}
+                  <tr>
+                    <td><strong>#{{ enq.id }}</strong></td>
+                    <td>{{ enq.enquiry_date|date:"d M Y, h:i A" }}</td>
+                    <td>
+                      <div><strong>{{ enq.customer.get_full_name|default:enq.customer.username }}</strong></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        📞 {{ enq.customer.phone|default:"-" }} • ✉️ {{ enq.customer.email|default:"-" }}
+                      </div>
+                    </td>
+                    <td>
+                      <div><strong>{{ enq.provider.business_name }}</strong></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">📍 {{ enq.provider.area }}</div>
+                    </td>
+                    <td style="max-width: 350px;">
+                      <div style="font-size: 0.875rem; line-height: 1.4; color: var(--text-main);">
+                        {{ enq.message }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if enq.status == 'new' %}
+                        <span class="badge badge-warning">● New</span>
+                      {% else %}
+                        <span class="badge badge-success">✓ Replied</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No customer inquiries found.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

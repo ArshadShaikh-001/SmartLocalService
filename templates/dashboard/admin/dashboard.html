@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Administrator Portal - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">System Administration &amp; Moderation 🛡️</h1>
+        <p class="dashboard-subheading">Central platform dashboard to oversee users, verify providers, and moderate activity</p>
+      </div>
+      <div>
+        <span class="badge badge-teal" style="font-size: 0.85rem; padding: 0.4rem 0.85rem;">
+          Platform Status: Active &amp; Operational
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <!-- Platform KPI Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👤</div>
+          <div>
+            <div class="stat-value">{{ metrics.total_customers }}</div>
+            <div class="stat-label">Registered Customers</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🏬</div>
+          <div>
+            <div class="stat-value">{{ metrics.total_providers }}</div>
+            <div class="stat-label">Service Providers</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">🛠️</div>
+          <div>
+            <div class="stat-value">{{ metrics.total_services }}</div>
+            <div class="stat-label">Live Services</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">📥</div>
+          <div>
+            <div class="stat-value">{{ metrics.total_requests }}</div>
+            <div class="stat-label">Total Bookings</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div>
+            <div class="stat-value" style="color: var(--warning);">{{ metrics.pending_verifications }}</div>
+            <div class="stat-label">Pending Providers</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div>
+            <div class="stat-value" style="color: #D97706;">{{ metrics.pending_reviews }}</div>
+            <div class="stat-label">Pending Reviews</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Moderation Alerts -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+        <!-- Pending Providers Notice -->
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-title">
+            <span>Pending Provider Verifications</span>
+            <a href="{% url 'admin_providers' %}?status=pending" class="btn btn-outline btn-xs">View All</a>
+          </div>
+
+          {% if pending_providers %}
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+              {% for p in pending_providers %}
+                <li style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem;">
+                  <div>
+                    <strong style="color: var(--text-main);">{{ p.business_name }}</strong>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                      User: {{ p.user.username }} • Area: {{ p.area }}
+                    </div>
+                  </div>
+                  <form method="POST" action="{% url 'admin_provider_toggle_verification' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-xs">Verify Now</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem 0;">
+              ✓ All provider profiles have been reviewed!
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Pending Reviews Notice -->
+        <div class="card" style="margin-bottom: 0;">
+          <div class="card-title">
+            <span>Customer Reviews for Moderation</span>
+            <a href="{% url 'admin_reviews' %}?status=pending" class="btn btn-outline btn-xs">View All</a>
+          </div>
+
+          {% if pending_reviews_list %}
+            <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.75rem;">
+              {% for rev in pending_reviews_list %}
+                <li style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.6rem;">
+                  <div>
+                    <strong style="color: #D97706;">★ {{ rev.rating }}/5</strong>
+                    <span style="font-size: 0.85rem; color: var(--text-main); margin-left: 0.35rem;">
+                      {{ rev.customer.username }} on <em>{{ rev.service.service_name|truncatewords:3 }}</em>
+                    </span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                      "{{ rev.review_text|truncatewords:6 }}"
+                    </div>
+                  </div>
+                  <form method="POST" action="{% url 'admin_review_moderate' rev.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-success-outline btn-xs">Approve</button>
+                  </form>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1rem 0;">
+              ✓ No reviews awaiting moderation.
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent Service Requests Table -->
+      <div class="card">
+        <div class="card-title">
+          <span>Recent Platform Bookings</span>
+          <a href="{% url 'admin_requests' %}" class="btn btn-secondary btn-sm">View All Bookings →</a>
+        </div>
+
+        {% if recent_requests %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Req #</th>
+                  <th>Customer</th>
+                  <th>Service</th>
+                  <th>Provider</th>
+                  <th>Preferred Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in recent_requests %}
+                  <tr>
+                    <td>#{{ req.id }}</td>
+                    <td>{{ req.customer.get_full_name|default:req.customer.username }}</td>
+                    <td><strong>{{ req.service.service_name }}</strong></td>
+                    <td>{{ req.service.provider.business_name }}</td>
+                    <td>{{ req.preferred_date|date:"d M Y" }}</td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <span class="badge badge-warning">Pending</span>
+                      {% elif req.status == 'accepted' %}
+                        <span class="badge badge-success">Accepted</span>
+                      {% elif req.status == 'completed' %}
+                        <span class="badge badge-teal">Completed</span>
+                      {% elif req.status == 'cancelled' %}
+                        <span class="badge badge-danger">Cancelled</span>
+                      {% else %}
+                        <span class="badge badge-danger">Rejected</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">No bookings found.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

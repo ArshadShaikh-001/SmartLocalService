@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Booking Requests Inbox - Provider Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Booking Requests Inbox</h1>
+        <p class="dashboard-subheading">Manage client appointments, accept new tasks, and mark completed jobs</p>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="{% url 'provider_requests' %}" class="btn {% if status_filter == 'all' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          All
+        </a>
+        <a href="{% url 'provider_requests' %}?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Pending
+        </a>
+        <a href="{% url 'provider_requests' %}?status=accepted" class="btn {% if status_filter == 'accepted' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Accepted
+        </a>
+        <a href="{% url 'provider_requests' %}?status=completed" class="btn {% if status_filter == 'completed' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+          Completed
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Client Bookings</span>
+          <span class="badge badge-teal">{{ requests.count }} Request{{ requests.count|pluralize }}</span>
+        </div>
+
+        {% if requests %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Req #</th>
+                  <th>Customer Info</th>
+                  <th>Service</th>
+                  <th>Preferred Date</th>
+                  <th>Customer Description</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in requests %}
+                  <tr>
+                    <td><strong>#{{ req.id }}</strong></td>
+                    <td>
+                      <div style="font-weight: 700; color: var(--text-main);">
+                        {{ req.customer.get_full_name|default:req.customer.username }}
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        📞 <a href="tel:{{ req.customer.phone }}">{{ req.customer.phone|default:"No phone" }}</a>
+                      </div>
+                    </td>
+                    <td>
+                      <strong>{{ req.service.service_name }}</strong>
+                    </td>
+                    <td>
+                      <div>{{ req.preferred_date|date:"d M Y" }}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        Recv: {{ req.request_date|date:"d M" }}
+                      </div>
+                    </td>
+                    <td style="max-width: 250px;">
+                      <div style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.4;">
+                        {{ req.description }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <span class="badge badge-warning">⏳ Pending</span>
+                      {% elif req.status == 'accepted' %}
+                        <span class="badge badge-success">✓ Accepted</span>
+                      {% elif req.status == 'completed' %}
+                        <span class="badge badge-teal">✓ Completed</span>
+                      {% elif req.status == 'cancelled' %}
+                        <span class="badge badge-danger">Cancelled</span>
+                      {% else %}
+                        <span class="badge badge-danger">Rejected</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <div style="display: flex; gap: 0.35rem;">
+                          <!-- Accept Button (pending -> accepted) -->
+                          <form method="POST" action="{% url 'provider_request_update_status' req.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="accept">
+                            <button type="submit" class="btn btn-success-outline btn-xs" title="Accept this booking">
+                              Accept
+                            </button>
+                          </form>
+
+                          <!-- Reject Button (pending -> rejected) -->
+                          <form method="POST" action="{% url 'provider_request_update_status' req.id %}" onsubmit="return confirm('Reject booking request #{{ req.id }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-danger-outline btn-xs" title="Reject booking">
+                              Reject
+                            </button>
+                          </form>
+                        </div>
+                      {% elif req.status == 'accepted' %}
+                        <!-- Mark Completed Button (accepted -> completed) -->
+                        <form method="POST" action="{% url 'provider_request_update_status' req.id %}" onsubmit="return confirm('Confirm that this service has been completed for the customer?');">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="complete">
+                          <button type="submit" class="btn btn-primary btn-xs" title="Mark job as completed">
+                            Mark Completed
+                          </button>
+                        </form>
+                      {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">No actions</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No booking requests matching this criteria.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

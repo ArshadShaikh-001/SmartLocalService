@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Users - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">User Account Management</h1>
+        <p class="dashboard-subheading">View, filter, and activate/deactivate customer and service provider accounts</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <!-- Search & Filter Bar -->
+      <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+        <form method="GET" action="{% url 'admin_users' %}" class="search-form" style="grid-template-columns: 2fr 1.5fr auto;">
+          <div class="search-field">
+            <span class="search-field-icon">🔍</span>
+            <input 
+              type="text" 
+              name="q" 
+              value="{{ query }}" 
+              class="search-input" 
+              placeholder="Search by username, name, email or phone..."
+            >
+          </div>
+
+          <div class="search-field">
+            <span class="search-field-icon">👤</span>
+            <select name="role" class="search-input">
+              <option value="all" {% if role_filter == 'all' %}selected{% endif %}>All Roles</option>
+              <option value="customer" {% if role_filter == 'customer' %}selected{% endif %}>Customers</option>
+              <option value="provider" {% if role_filter == 'provider' %}selected{% endif %}>Service Providers</option>
+              <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Administrators</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="height: 46px;">
+            Filter Users
+          </button>
+        </form>
+      </div>
+
+      <!-- Users Table -->
+      <div class="card">
+        <div class="card-title">
+          <span>Registered Users</span>
+          <span class="badge badge-teal">{{ users.count }} Account{{ users.count|pluralize }}</span>
+        </div>
+
+        {% if users %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Contact Details</th>
+                  <th>Registered Date</th>
+                  <th>Account Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                  <tr>
+                    <td>
+                      <div style="font-weight: 700; color: var(--text-main);">
+                        {{ u.get_full_name|default:u.username }}
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        @{{ u.username }}
+                      </div>
+                    </td>
+                    <td>
+                      {% if u.role == 'admin' or u.is_superuser %}
+                        <span class="badge badge-teal" style="background: #E0E7FF; color: #3730A3;">Admin</span>
+                      {% elif u.role == 'provider' %}
+                        <span class="badge badge-teal">Service Provider</span>
+                      {% else %}
+                        <span class="badge badge-secondary">Customer</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div style="font-size: 0.85rem;">✉️ {{ u.email|default:"-" }}</div>
+                      <div style="font-size: 0.85rem; color: var(--text-muted);">📞 {{ u.phone|default:"-" }}</div>
+                    </td>
+                    <td>{{ u.date_joined|date:"d M Y" }}</td>
+                    <td>
+                      {% if u.is_active %}
+                        <span class="badge badge-success">● Active</span>
+                      {% else %}
+                        <span class="badge badge-danger">● Deactivated</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if u == request.user %}
+                        <span style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">(Current Admin)</span>
+                      {% else %}
+                        <form method="POST" action="{% url 'admin_user_toggle_active' u.id %}" onsubmit="return confirm('{% if u.is_active %}Deactivate account for {{ u.username|escapejs }}?{% else %}Activate account for {{ u.username|escapejs }}?{% endif %}');">
+                          {% csrf_token %}
+                          {% if u.is_active %}
+                            <button type="submit" class="btn btn-danger-outline btn-xs">
+                              Deactivate
+                            </button>
+                          {% else %}
+                            <button type="submit" class="btn btn-success-outline btn-xs">
+                              Activate
+                            </button>
+                          {% endif %}
+                        </form>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No users found matching your search.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

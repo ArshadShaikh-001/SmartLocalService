@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Provider Dashboard - Smart Local Service Connect{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">{{ profile.business_name }}</h1>
+        <p class="dashboard-subheading">
+          Service Provider: <strong>{{ user.get_full_name|default:user.username }}</strong> • 
+          Base Area: <strong>{{ profile.area }}</strong> • 
+          Experience: <strong>{{ profile.experience }} Years</strong>
+        </p>
+      </div>
+
+      <!-- One-click Availability Toggle Form -->
+      <div>
+        <form method="POST" action="{% url 'provider_toggle_availability' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% if profile.availability_status == 'available' %}
+            <button type="submit" class="btn btn-secondary" title="Click to switch status to Busy">
+              <span style="color: var(--success);">● Available</span> (Click to set Busy)
+            </button>
+          {% else %}
+            <button type="submit" class="btn btn-primary" title="Click to switch status to Available">
+              <span style="color: var(--warning);">● Busy</span> (Click to set Available)
+            </button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <!-- Unverified Provider Warning Banner -->
+  {% if profile.verification_status != 'verified' %}
+    <div style="background: var(--warning-bg); border: 1px solid #FDE68A; color: #78350F; padding: 1.25rem 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+      <span style="font-size: 1.5rem;">⚠️</span>
+      <div>
+        <strong style="display: block; font-size: 1rem; margin-bottom: 0.2rem;">Account Pending Verification</strong>
+        <span>Your profile is awaiting admin verification. Your services will be visible to customers after verification.</span>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="dashboard-layout">
+    <!-- Sidebar -->
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <div class="dashboard-content">
+      <!-- Overview Metric Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🛠️</div>
+          <div>
+            <div class="stat-value">{{ stats.total_services }}</div>
+            <div class="stat-label">Total Services</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div>
+            <div class="stat-value" style="color: var(--warning);">{{ stats.pending_requests }}</div>
+            <div class="stat-label">Pending Bookings</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">💬</div>
+          <div>
+            <div class="stat-value" style="color: var(--info);">{{ stats.new_enquiries }}</div>
+            <div class="stat-label">New Inquiries</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div>
+            <div class="stat-value" style="color: #D97706;">
+              {% if stats.avg_rating %}
+                {{ stats.avg_rating|format_rating }}
+              {% else %}
+                New
+              {% endif %}
+            </div>
+            <div class="stat-label">Average Rating</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Shortcuts -->
+      <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <a href="{% url 'provider_service_add' %}" class="btn btn-primary btn-sm">
+          <span>➕</span> Add New Service
+        </a>
+        <a href="{% url 'provider_requests' %}?status=pending" class="btn btn-outline btn-sm">
+          <span>📥</span> View Pending Requests ({{ stats.pending_requests }})
+        </a>
+        <a href="{% url 'provider_enquiries' %}" class="btn btn-secondary btn-sm">
+          <span>💬</span> View Client Inquiries
+        </a>
+      </div>
+
+      <!-- Edit Business Profile Form -->
+      <div class="card" style="margin-bottom: 2rem;">
+        <div class="card-title">
+          <span>✏️ Edit Business Profile</span>
+          <span class="badge badge-teal">Provider ID #{{ profile.id }}</span>
+        </div>
+
+        <form method="POST" action="{% url 'provider_dashboard' %}">
+          {% csrf_token %}
+          <input type="hidden" name="update_profile" value="1">
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+            <div class="form-group">
+              <label class="form-label" for="id_business_name">Business / Commercial Name</label>
+              {{ profile_form.business_name }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_experience">Experience (Years)</label>
+              {{ profile_form.experience }}
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <div class="form-group">
+              <label class="form-label" for="id_area">Service Hub / Area (Town)</label>
+              {{ profile_form.area }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_phone">Contact Phone Number</label>
+              {{ profile_form.phone }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="id_address">Workshop / Office Address</label>
+            {{ profile_form.address }}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="id_description">Profile Bio &amp; Specialties</label>
+            {{ profile_form.description }}
+          </div>
+
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary btn-sm">
+              Save Profile Changes
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Recent Booking Requests Preview -->
+      <div class="card">
+        <div class="card-title">
+          <span>Recent Incoming Requests</span>
+          <a href="{% url 'provider_requests' %}" class="btn btn-outline btn-sm">View All Inbox →</a>
+        </div>
+
+        {% if recent_requests %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Req #</th>
+                  <th>Customer</th>
+                  <th>Service</th>
+                  <th>Preferred Date</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in recent_requests %}
+                  <tr>
+                    <td>#{{ req.id }}</td>
+                    <td><strong>{{ req.customer.get_full_name|default:req.customer.username }}</strong></td>
+                    <td>{{ req.service.service_name }}</td>
+                    <td>{{ req.preferred_date|date:"d M Y" }}</td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <span class="badge badge-warning">⏳ Pending</span>
+                      {% elif req.status == 'accepted' %}
+                        <span class="badge badge-success">✓ Accepted</span>
+                      {% elif req.status == 'completed' %}
+                        <span class="badge badge-teal">✓ Completed</span>
+                      {% else %}
+                        <span class="badge badge-danger">{{ req.get_status_display }}</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if req.status == 'pending' %}
+                        <form method="POST" action="{% url 'provider_request_update_status' req.id %}" style="display: inline;">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="accept">
+                          <button type="submit" class="btn btn-success-outline btn-xs">Accept</button>
+                        </form>
+                        <form method="POST" action="{% url 'provider_request_update_status' req.id %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to reject this request?');">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="reject">
+                          <button type="submit" class="btn btn-danger-outline btn-xs">Reject</button>
+                        </form>
+                      {% elif req.status == 'accepted' %}
+                        <form method="POST" action="{% url 'provider_request_update_status' req.id %}" style="display: inline;" onsubmit="return confirm('Mark this service booking as Completed?');">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="complete">
+                          <button type="submit" class="btn btn-primary btn-xs">Mark Completed</button>
+                        </form>
+                      {% else %}
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+            No service requests received yet.
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

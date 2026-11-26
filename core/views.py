@@ -1,6 +1,7 @@
 """
 Views for Smart Local Service Connect
-Includes Public Pages, RBAC Authentication, Customer Flow, and Role-Specific Dashboards.
+Includes Public Pages, RBAC Authentication, Customer Flow,
+Service Provider Management, and Custom Administrator Portals.
 """
 
 from datetime import date
@@ -11,6 +12,7 @@ from django.db.models import Q, Avg, Count, F
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from .models import (
     ServiceCategory,
@@ -26,7 +28,10 @@ from .forms import (
     ServiceRequestForm,
     ContactEnquiryForm,
     ReviewForm,
-    CustomerProfileForm
+    CustomerProfileForm,
+    ProviderProfileForm,
+    ServiceForm,
+    CategoryForm
 )
 from .decorators import role_required
 
@@ -34,7 +39,7 @@ User = get_user_model()
 
 
 # ==============================================================================
-# PUBLIC PAGES & CATALOG
+# 1. PUBLIC PAGES & SERVICE CATALOG
 # ==============================================================================
 
 def home_view(request):
@@ -107,7 +112,6 @@ def services_view(request):
     category_id = request.GET.get('category', '').strip()
     sort = request.GET.get('sort', 'newest').strip()
 
-    # Base query: Active services with verified providers, using select_related and annotate to prevent N+1 queries
     services_queryset = Service.objects.filter(
         status='active',
         provider__verification_status='verified'
@@ -118,7 +122,6 @@ def services_view(request):
         review_count=Count('reviews', filter=Q(reviews__moderation_status='approved'))
     )
 
-    # 1. Keyword search
     if query:
         services_queryset = services_queryset.filter(
             Q(service_name__icontains=query) |
@@ -127,7 +130,6 @@ def services_view(request):
             Q(provider__business_name__icontains=query)
         )
 
-    # 2. Location search
     if location:
         services_queryset = services_queryset.filter(
             Q(service_area__icontains=location) |
@@ -135,25 +137,21 @@ def services_view(request):
             Q(provider__address__icontains=location)
         )
 
-    # 3. Category filter
     if category_id:
         if category_id.isdigit():
             services_queryset = services_queryset.filter(category_id=int(category_id))
         else:
             services_queryset = services_queryset.filter(category__name__iexact=category_id)
 
-    # 4. Sorting
     if sort == 'rating':
         services_queryset = services_queryset.order_by(F('avg_rating').desc(nulls_last=True), '-created_at')
     elif sort == 'experience':
         services_queryset = services_queryset.order_by('-provider__experience', '-created_at')
-    else:  # newest
+    else:
         services_queryset = services_queryset.order_by('-created_at')
 
-    # Total matching records before pagination
     total_matching = services_queryset.count()
 
-    # 5. Pagination: 9 per page
     paginator = Paginator(services_queryset, 9)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -180,7 +178,6 @@ def service_detail_view(request, pk):
     - Summary card of provider with link to provider profile
     - Approved reviews only, with average rating
     - Action forms: Send Enquiry, Request This Service, and Post Review
-    - Role restrictions applied: only role=customer can request, enquire, or review.
     """
     service = get_object_or_404(
         Service.objects.select_related('provider', 'provider__user', 'category').annotate(
@@ -191,23 +188,19 @@ def service_detail_view(request, pk):
         status='active'
     )
 
-    # Approved reviews for this service
     reviews = service.reviews.filter(moderation_status='approved').select_related('customer').order_by('-review_date')
 
-    # Check review eligibility for logged-in customers
     can_review = False
     has_completed_booking = False
     existing_user_review = None
 
     if request.user.is_authenticated and request.user.is_customer():
-        # Check if customer has any completed request for this service
         has_completed_booking = ServiceRequest.objects.filter(
             customer=request.user,
             service=service,
             status='completed'
         ).exists()
 
-        # Check if user already submitted a review (pending or approved)
         existing_user_review = Review.objects.filter(
             customer=request.user,
             service=service
@@ -243,13 +236,11 @@ def provider_profile_view(request, pk):
         pk=pk
     )
 
-    # Provider's active services
     provider_services = provider.services.filter(status='active').select_related('category').annotate(
         avg_rating=Avg('reviews__rating', filter=Q(reviews__moderation_status='approved')),
         review_count=Count('reviews', filter=Q(reviews__moderation_status='approved'))
     )
 
-    # All approved reviews across all services offered by this provider
     approved_reviews = Review.objects.filter(
         service__provider=provider,
         moderation_status='approved'
@@ -265,24 +256,19 @@ def provider_profile_view(request, pk):
 
 
 # ==============================================================================
-# CUSTOMER ACTIONS (BOOKINGS, ENQUIRIES, REVIEWS)
+# 2. CUSTOMER ACTIONS (BOOKINGS, ENQUIRIES, REVIEWS)
 # ==============================================================================
 
 def service_request_create_view(request, pk):
-    """
-    Handles submission of a booking request for a service.
-    Requires customer authentication.
-    """
+    """Handles booking submission by a customer."""
     service = get_object_or_404(Service, pk=pk, status='active')
 
     if not request.user.is_authenticated:
         messages.warning(request, "Please log in as a customer to book this service.")
-        login_url = reverse('login')
-        next_path = reverse('service_detail', kwargs={'pk': pk})
-        return redirect(f"{login_url}?next={next_path}")
+        return redirect(f"{reverse('login')}?next={reverse('service_detail', kwargs={'pk': pk})}")
 
     if not request.user.is_customer():
-        messages.error(request, "Only customer accounts can book services. You are currently logged in with a non-customer role.")
+        messages.error(request, "Only customer accounts can book services.")
         return redirect('service_detail', pk=pk)
 
     if request.method == 'POST':
@@ -297,7 +283,7 @@ def service_request_create_view(request, pk):
             )
             messages.success(
                 request,
-                f"Booking request for '{service.service_name}' submitted successfully! You can track its status in your dashboard."
+                f"Booking request for '{service.service_name}' submitted successfully!"
             )
             return redirect('customer_dashboard')
         else:
@@ -309,17 +295,12 @@ def service_request_create_view(request, pk):
 
 
 def service_enquiry_create_view(request, pk):
-    """
-    Handles sending a direct enquiry to a provider regarding a service.
-    Requires customer authentication.
-    """
+    """Handles direct enquiry to provider for a specific service."""
     service = get_object_or_404(Service.objects.select_related('provider'), pk=pk)
 
     if not request.user.is_authenticated:
         messages.warning(request, "Please log in as a customer to send an inquiry.")
-        login_url = reverse('login')
-        next_path = reverse('service_detail', kwargs={'pk': pk})
-        return redirect(f"{login_url}?next={next_path}")
+        return redirect(f"{reverse('login')}?next={reverse('service_detail', kwargs={'pk': pk})}")
 
     if not request.user.is_customer():
         messages.error(request, "Only customer accounts can send service inquiries.")
@@ -344,16 +325,12 @@ def service_enquiry_create_view(request, pk):
 
 
 def provider_enquiry_create_view(request, pk):
-    """
-    Handles sending an enquiry directly from a provider's profile page.
-    """
+    """Handles direct enquiry from provider's profile page."""
     provider = get_object_or_404(ServiceProvider, pk=pk)
 
     if not request.user.is_authenticated:
         messages.warning(request, "Please log in as a customer to send an inquiry.")
-        login_url = reverse('login')
-        next_path = reverse('provider_profile', kwargs={'pk': pk})
-        return redirect(f"{login_url}?next={next_path}")
+        return redirect(f"{reverse('login')}?next={reverse('provider_profile', kwargs={'pk': pk})}")
 
     if not request.user.is_customer():
         messages.error(request, "Only customer accounts can send provider inquiries.")
@@ -378,27 +355,17 @@ def provider_enquiry_create_view(request, pk):
 
 
 def review_create_view(request, pk):
-    """
-    Submits a rating (1-5) and review for a service.
-    Enforces rules:
-      - Must be customer role
-      - Must have a 'completed' service request for this service
-      - One review per customer per service
-      - Saved with moderation_status='pending'
-    """
+    """Submits review for completed service."""
     service = get_object_or_404(Service, pk=pk, status='active')
 
     if not request.user.is_authenticated:
         messages.warning(request, "Please log in to submit a review.")
-        login_url = reverse('login')
-        next_path = reverse('service_detail', kwargs={'pk': pk})
-        return redirect(f"{login_url}?next={next_path}")
+        return redirect(f"{reverse('login')}?next={reverse('service_detail', kwargs={'pk': pk})}")
 
     if not request.user.is_customer():
         messages.error(request, "Only customers can submit reviews.")
         return redirect('service_detail', pk=pk)
 
-    # Eligibility check: Must have completed booking
     has_completed = ServiceRequest.objects.filter(
         customer=request.user,
         service=service,
@@ -409,7 +376,6 @@ def review_create_view(request, pk):
         messages.error(request, "You can only review services for which you have a completed booking.")
         return redirect('service_detail', pk=pk)
 
-    # Duplicate check: One review per customer per service
     if Review.objects.filter(customer=request.user, service=service).exists():
         messages.warning(request, "You have already submitted a review for this service.")
         return redirect('service_detail', pk=pk)
@@ -434,9 +400,7 @@ def review_create_view(request, pk):
 
 
 def cancel_request_view(request, pk):
-    """
-    Allows a customer to cancel their own service request while it is still 'pending'.
-    """
+    """Allows customer to cancel a pending booking request."""
     if not request.user.is_authenticated or not request.user.is_customer():
         messages.error(request, "Unauthorized action.")
         return redirect('home')
@@ -455,42 +419,11 @@ def cancel_request_view(request, pk):
 
 
 # ==============================================================================
-# STATIC & INFO PAGES
-# ==============================================================================
-
-def about_view(request):
-    """About Page showcasing platform vision and BCA mini project technical details."""
-    return render(request, 'about.html')
-
-
-def contact_view(request):
-    """Contact page with platform support details and enquiry message box."""
-    if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        email = request.POST.get('email', '').strip()
-        message_text = request.POST.get('message', '').strip()
-
-        if name and email and message_text:
-            messages.success(request, "Thank you! Your inquiry has been received. Our support team will reach out shortly.")
-            return redirect('contact')
-        else:
-            messages.error(request, "Please fill in all required fields.")
-
-    return render(request, 'contact.html')
-
-
-# ==============================================================================
-# AUTHENTICATION VIEWS
+# 3. AUTHENTICATION & REDIRECTION
 # ==============================================================================
 
 def register_view(request):
-    """
-    User Registration View:
-    - Creates Customer or Service Provider account.
-    - Strictly disallows registering with 'admin' role.
-    - If provider is chosen, automatically creates a linked ServiceProvider profile.
-    - Hashes passwords using Django's default secure algorithm.
-    """
+    """User Registration for Customer or Service Provider."""
     if request.user.is_authenticated:
         return redirect('dashboard_redirect')
 
@@ -548,12 +481,7 @@ def register_view(request):
 
 
 def login_view(request):
-    """
-    User Login View:
-    - Allows login with either username or email address.
-    - Validates credentials and active status.
-    - Redirects user according to their role.
-    """
+    """Dual login via username or email."""
     if request.user.is_authenticated:
         return redirect('dashboard_redirect')
 
@@ -590,23 +518,15 @@ def login_view(request):
 
 
 def logout_view(request):
-    """
-    Logs out the authenticated user and redirects to the home page.
-    """
+    """Logs out authenticated user."""
     logout(request)
     messages.info(request, "You have been logged out successfully.")
     return redirect('home')
 
 
-# ==============================================================================
-# DASHBOARDS & ROLE-BASED ROUTING
-# ==============================================================================
-
 @login_required
 def dashboard_redirect_view(request):
-    """
-    Dispatches logged-in user to their specific dashboard based on role.
-    """
+    """Dispatches user to their role dashboard."""
     user = request.user
     if user.is_superuser or user.role == 'admin':
         return redirect('admin_dashboard')
@@ -616,18 +536,15 @@ def dashboard_redirect_view(request):
         return redirect('customer_dashboard')
 
 
+# ==============================================================================
+# 4. CUSTOMER DASHBOARD
+# ==============================================================================
+
 @role_required(allowed_roles=['customer'])
 def customer_dashboard_view(request):
-    """
-    Customer Dashboard:
-    - Profile info with an edit form (name, phone, email)
-    - "My Service Requests" table with status badge and cancel action for pending requests
-    - "My Enquiries" table with status
-    - "My Reviews" table with moderation status
-    """
+    """Customer Dashboard managing profile, bookings, enquiries, and reviews."""
     user = request.user
 
-    # Handle Profile Update Form
     if request.method == 'POST' and 'update_profile' in request.POST:
         profile_form = CustomerProfileForm(request.POST, instance=user)
         if profile_form.is_valid():
@@ -656,73 +573,646 @@ def customer_dashboard_view(request):
     return render(request, 'dashboard/customer_dashboard.html', context)
 
 
+# ==============================================================================
+# 5. SERVICE PROVIDER MODULE (/dashboard/provider/...)
+# ==============================================================================
+
+def _get_provider_profile(user):
+    """Helper to retrieve or safely create ServiceProvider profile for a provider user."""
+    profile, _ = ServiceProvider.objects.get_or_create(
+        user=user,
+        defaults={
+            'business_name': f"{user.get_full_name() or user.username} Services",
+            'experience': 0,
+            'address': "Please update your address",
+            'area': "Pune",
+            'description': "Professional service provider profile.",
+            'verification_status': 'pending',
+            'availability_status': 'available',
+        }
+    )
+    return profile
+
+
 @role_required(allowed_roles=['provider'])
 def provider_dashboard_view(request):
     """
-    Service Provider Dashboard:
-    - Provider business profile status
-    - Services listed by this provider
-    - Service requests and client enquiries
+    Main Provider Dashboard:
+    - Overview cards: total services, pending requests, new enquiries, average rating, verification badge
+    - Banner for unverified providers
+    - Profile edit form
+    - One-click availability toggle
+    - Recent requests preview
     """
-    profile, _ = ServiceProvider.objects.get_or_create(
-        user=request.user,
-        defaults={
-            'business_name': f"{request.user.get_full_name() or request.user.username} Services",
-            'experience': 0,
-            'address': "Not specified",
-            'area': "Pune",
-            'description': "Service provider profile.",
-        }
-    )
+    profile = _get_provider_profile(request.user)
+
+    if request.method == 'POST' and 'update_profile' in request.POST:
+        profile_form = ProviderProfileForm(request.POST, instance=profile)
+        if profile_form.is_valid():
+            profile_form.save()
+            # Also update phone number on user model
+            phone = profile_form.cleaned_data.get('phone')
+            if phone:
+                request.user.phone = phone
+                request.user.save(update_fields=['phone'])
+            messages.success(request, "Business profile details updated successfully!")
+            return redirect('provider_dashboard')
+        else:
+            for field, errors in profile_form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        profile_form = ProviderProfileForm(instance=profile)
 
     provider_services = Service.objects.filter(provider=profile)
     incoming_requests = ServiceRequest.objects.filter(service__provider=profile).select_related('customer', 'service')
     enquiries = ContactEnquiry.objects.filter(provider=profile).select_related('customer')
+    approved_reviews = Review.objects.filter(service__provider=profile, moderation_status='approved')
 
     context = {
+        'active_tab': 'overview',
         'profile': profile,
-        'services': provider_services,
-        'incoming_requests': incoming_requests,
-        'enquiries': enquiries,
+        'profile_form': profile_form,
         'stats': {
             'total_services': provider_services.count(),
-            'total_requests': incoming_requests.count(),
             'pending_requests': incoming_requests.filter(status='pending').count(),
-            'total_enquiries': enquiries.count(),
-        }
+            'new_enquiries': enquiries.filter(status='new').count(),
+            'avg_rating': profile.average_rating(),
+            'approved_reviews_count': approved_reviews.count(),
+        },
+        'recent_requests': incoming_requests[:5],
+        'recent_services': provider_services[:4],
+        'recent_enquiries': enquiries[:4],
     }
-    return render(request, 'dashboard/provider_dashboard.html', context)
+    return render(request, 'dashboard/provider/dashboard.html', context)
 
+
+@role_required(allowed_roles=['provider'])
+@require_POST
+def provider_toggle_availability_view(request):
+    """Toggles provider availability between 'available' and 'busy'."""
+    profile = _get_provider_profile(request.user)
+    if profile.availability_status == 'available':
+        profile.availability_status = 'busy'
+        messages.info(request, "Your status is now set to 'Busy / Unavailable'.")
+    else:
+        profile.availability_status = 'available'
+        messages.success(request, "Your status is now set to 'Available' for new customer bookings.")
+    profile.save(update_fields=['availability_status'])
+
+    next_url = request.POST.get('next') or reverse('provider_dashboard')
+    return redirect(next_url)
+
+
+@role_required(allowed_roles=['provider'])
+def provider_services_view(request):
+    """List all services owned by this provider with edit/toggle/delete options."""
+    profile = _get_provider_profile(request.user)
+    services = Service.objects.filter(provider=profile).select_related('category').annotate(
+        avg_rating=Avg('reviews__rating', filter=Q(reviews__moderation_status='approved')),
+        review_count=Count('reviews', filter=Q(reviews__moderation_status='approved'))
+    ).order_by('-created_at')
+
+    context = {
+        'active_tab': 'services',
+        'profile': profile,
+        'services': services,
+    }
+    return render(request, 'dashboard/provider/services_list.html', context)
+
+
+@role_required(allowed_roles=['provider'])
+def provider_service_add_view(request):
+    """Add a new service offering under this provider."""
+    profile = _get_provider_profile(request.user)
+
+    if request.method == 'POST':
+        form = ServiceForm(request.POST)
+        if form.is_valid():
+            service = form.save(commit=False)
+            service.provider = profile
+            service.status = 'active'
+            service.save()
+            messages.success(request, f"Service '{service.service_name}' added successfully!")
+            return redirect('provider_services')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        form = ServiceForm()
+
+    context = {
+        'active_tab': 'services',
+        'profile': profile,
+        'form': form,
+        'is_edit': False,
+    }
+    return render(request, 'dashboard/provider/service_form.html', context)
+
+
+@role_required(allowed_roles=['provider'])
+def provider_service_edit_view(request, pk):
+    """Edit an existing service owned by this provider."""
+    profile = _get_provider_profile(request.user)
+    # Strictly ensure provider owns the service
+    service = get_object_or_404(Service, pk=pk, provider=profile)
+
+    if request.method == 'POST':
+        form = ServiceForm(request.POST, instance=service)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Service '{service.service_name}' updated successfully!")
+            return redirect('provider_services')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        form = ServiceForm(instance=service)
+
+    context = {
+        'active_tab': 'services',
+        'profile': profile,
+        'form': form,
+        'service': service,
+        'is_edit': True,
+    }
+    return render(request, 'dashboard/provider/service_form.html', context)
+
+
+@role_required(allowed_roles=['provider'])
+@require_POST
+def provider_service_toggle_status_view(request, pk):
+    """Toggles active/inactive status of a service owned by this provider."""
+    profile = _get_provider_profile(request.user)
+    service = get_object_or_404(Service, pk=pk, provider=profile)
+
+    if service.status == 'active':
+        service.status = 'inactive'
+        messages.info(request, f"Service '{service.service_name}' has been deactivated.")
+    else:
+        service.status = 'active'
+        messages.success(request, f"Service '{service.service_name}' is now active.")
+    service.save(update_fields=['status'])
+
+    return redirect('provider_services')
+
+
+@role_required(allowed_roles=['provider'])
+@require_POST
+def provider_service_delete_view(request, pk):
+    """Deletes a service owned by this provider."""
+    profile = _get_provider_profile(request.user)
+    service = get_object_or_404(Service, pk=pk, provider=profile)
+    name = service.service_name
+    service.delete()
+    messages.success(request, f"Service '{name}' has been deleted successfully.")
+    return redirect('provider_services')
+
+
+@role_required(allowed_roles=['provider'])
+def provider_requests_view(request):
+    """Service requests inbox for this provider."""
+    profile = _get_provider_profile(request.user)
+    status_filter = request.GET.get('status', 'all').strip()
+
+    requests_qs = ServiceRequest.objects.filter(service__provider=profile).select_related('customer', 'service').order_by('-request_date')
+
+    if status_filter in ['pending', 'accepted', 'rejected', 'completed', 'cancelled']:
+        requests_qs = requests_qs.filter(status=status_filter)
+
+    context = {
+        'active_tab': 'requests',
+        'profile': profile,
+        'requests': requests_qs,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/provider/requests_inbox.html', context)
+
+
+@role_required(allowed_roles=['provider'])
+@require_POST
+def provider_request_update_status_view(request, pk):
+    """
+    Updates status of a service request with strict state transitions:
+    - pending -> accepted or rejected
+    - accepted -> completed
+    """
+    profile = _get_provider_profile(request.user)
+    service_request = get_object_or_404(ServiceRequest, pk=pk, service__provider=profile)
+    action = request.POST.get('action')
+
+    if action == 'accept':
+        if service_request.status == 'pending':
+            service_request.status = 'accepted'
+            service_request.save(update_fields=['status'])
+            messages.success(request, f"Request #{service_request.id} for '{service_request.service.service_name}' has been Accepted.")
+        else:
+            messages.error(request, "Only pending requests can be accepted.")
+
+    elif action == 'reject':
+        if service_request.status == 'pending':
+            service_request.status = 'rejected'
+            service_request.save(update_fields=['status'])
+            messages.warning(request, f"Request #{service_request.id} has been Rejected.")
+        else:
+            messages.error(request, "Only pending requests can be rejected.")
+
+    elif action == 'complete':
+        if service_request.status == 'accepted':
+            service_request.status = 'completed'
+            service_request.save(update_fields=['status'])
+            messages.success(request, f"Request #{service_request.id} has been marked Completed! The customer can now review this service.")
+        else:
+            messages.error(request, "Only accepted requests can be marked completed.")
+    else:
+        messages.error(request, "Unknown action.")
+
+    return redirect('provider_requests')
+
+
+@role_required(allowed_roles=['provider'])
+def provider_enquiries_view(request):
+    """Client inquiries inbox for this provider."""
+    profile = _get_provider_profile(request.user)
+    enquiries = ContactEnquiry.objects.filter(provider=profile).select_related('customer').order_by('-enquiry_date')
+
+    context = {
+        'active_tab': 'enquiries',
+        'profile': profile,
+        'enquiries': enquiries,
+    }
+    return render(request, 'dashboard/provider/enquiries_inbox.html', context)
+
+
+@role_required(allowed_roles=['provider'])
+@require_POST
+def provider_enquiry_reply_view(request, pk):
+    """Marks an inquiry as replied."""
+    profile = _get_provider_profile(request.user)
+    enquiry = get_object_or_404(ContactEnquiry, pk=pk, provider=profile)
+    enquiry.status = 'replied'
+    enquiry.save(update_fields=['status'])
+    messages.success(request, f"Inquiry #{enquiry.id} marked as replied.")
+    return redirect('provider_enquiries')
+
+
+@role_required(allowed_roles=['provider'])
+def provider_reviews_view(request):
+    """Read-only list of approved reviews for services owned by this provider."""
+    profile = _get_provider_profile(request.user)
+    reviews = Review.objects.filter(service__provider=profile, moderation_status='approved').select_related('customer', 'service').order_by('-review_date')
+
+    context = {
+        'active_tab': 'reviews',
+        'profile': profile,
+        'reviews': reviews,
+    }
+    return render(request, 'dashboard/provider/reviews_list.html', context)
+
+
+# ==============================================================================
+# 6. CUSTOM ADMINISTRATOR MODULE (/dashboard/admin/...)
+# ==============================================================================
 
 @role_required(allowed_roles=['admin'])
 def admin_dashboard_view(request):
     """
-    Admin Dashboard:
-    - Platform KPIs
-    - Providers awaiting verification
-    - Reviews awaiting moderation
-    - Shortcut to Django Admin portal
+    Custom Admin Dashboard:
+    - Overview counts of customers, providers, services, requests,
+      pending verifications, and pending reviews.
+    - Quick action links and recent activity.
     """
-    total_users = User.objects.count()
     total_customers = User.objects.filter(role='customer').count()
     total_providers = ServiceProvider.objects.count()
     total_services = Service.objects.count()
+    total_requests = ServiceRequest.objects.count()
     pending_verifications = ServiceProvider.objects.filter(verification_status='pending').count()
     pending_reviews = Review.objects.filter(moderation_status='pending').count()
 
-    recent_users = User.objects.order_by('-date_joined')[:5]
-    recent_requests = ServiceRequest.objects.select_related('customer', 'service').order_by('-request_date')[:5]
+    recent_requests = ServiceRequest.objects.select_related('customer', 'service').order_by('-request_date')[:6]
+    pending_providers = ServiceProvider.objects.filter(verification_status='pending').select_related('user')[:5]
+    pending_reviews_list = Review.objects.filter(moderation_status='pending').select_related('customer', 'service')[:5]
 
     context = {
+        'active_tab': 'overview',
         'metrics': {
-            'total_users': total_users,
             'total_customers': total_customers,
             'total_providers': total_providers,
             'total_services': total_services,
+            'total_requests': total_requests,
             'pending_verifications': pending_verifications,
             'pending_reviews': pending_reviews,
         },
-        'recent_users': recent_users,
         'recent_requests': recent_requests,
+        'pending_providers': pending_providers,
+        'pending_reviews_list': pending_reviews_list,
     }
-    return render(request, 'dashboard/admin_dashboard.html', context)
+    return render(request, 'dashboard/admin/dashboard.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+def admin_users_view(request):
+    """Manage Users: Table of customers and providers with search and role filter."""
+    query = request.GET.get('q', '').strip()
+    role_filter = request.GET.get('role', 'all').strip()
+
+    users_qs = User.objects.all().order_by('-date_joined')
+
+    if role_filter in ['customer', 'provider', 'admin']:
+        users_qs = users_qs.filter(role=role_filter)
+
+    if query:
+        users_qs = users_qs.filter(
+            Q(username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(phone__icontains=query)
+        )
+
+    context = {
+        'active_tab': 'users',
+        'users': users_qs,
+        'query': query,
+        'role_filter': role_filter,
+    }
+    return render(request, 'dashboard/admin/users_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_user_toggle_active_view(request, pk):
+    """Toggles active status of a user. Admin cannot deactivate themselves."""
+    target_user = get_object_or_404(User, pk=pk)
+
+    if target_user == request.user:
+        messages.error(request, "Security protection: You cannot deactivate your own administrative account.")
+        return redirect('admin_users')
+
+    target_user.is_active = not target_user.is_active
+    target_user.save(update_fields=['is_active'])
+
+    status_str = "activated" if target_user.is_active else "deactivated"
+    messages.success(request, f"User '{target_user.username}' has been {status_str}.")
+    return redirect('admin_users')
+
+
+@role_required(allowed_roles=['admin'])
+def admin_providers_view(request):
+    """Manage Providers: List with verification status and Verify/Unverify actions."""
+    status_filter = request.GET.get('status', 'all').strip()
+
+    providers_qs = ServiceProvider.objects.select_related('user').order_by('-created_at')
+
+    if status_filter in ['pending', 'verified']:
+        providers_qs = providers_qs.filter(verification_status=status_filter)
+
+    context = {
+        'active_tab': 'providers',
+        'providers': providers_qs,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/admin/providers_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_provider_toggle_verification_view(request, pk):
+    """Toggles verification status of a service provider."""
+    provider = get_object_or_404(ServiceProvider, pk=pk)
+
+    if provider.verification_status == 'verified':
+        provider.verification_status = 'pending'
+        messages.info(request, f"Provider '{provider.business_name}' status reverted to 'Pending Verification'.")
+    else:
+        provider.verification_status = 'verified'
+        messages.success(request, f"Provider '{provider.business_name}' is now Verified! Their services are now publicly visible.")
+    provider.save(update_fields=['verification_status'])
+
+    return redirect('admin_providers')
+
+
+@role_required(allowed_roles=['admin'])
+def admin_categories_view(request):
+    """Manage Categories: List all categories with Add form and Edit/Delete options."""
+    categories = ServiceCategory.objects.all().annotate(
+        total_services=Count('services')
+    ).order_by('name')
+
+    if request.method == 'POST' and 'add_category' in request.POST:
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            cat = form.save()
+            messages.success(request, f"Category '{cat.name}' created successfully!")
+            return redirect('admin_categories')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        form = CategoryForm()
+
+    context = {
+        'active_tab': 'categories',
+        'categories': categories,
+        'form': form,
+    }
+    return render(request, 'dashboard/admin/categories_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+def admin_category_edit_view(request, pk):
+    """Edit an existing category."""
+    category = get_object_or_404(ServiceCategory, pk=pk)
+
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Category '{category.name}' updated successfully!")
+            return redirect('admin_categories')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{error}")
+    else:
+        form = CategoryForm(instance=category)
+
+    context = {
+        'active_tab': 'categories',
+        'category': category,
+        'form': form,
+    }
+    return render(request, 'dashboard/admin/category_edit.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_category_toggle_status_view(request, pk):
+    """Toggles active/inactive status of a category."""
+    category = get_object_or_404(ServiceCategory, pk=pk)
+    category.status = 'inactive' if category.status == 'active' else 'active'
+    category.save(update_fields=['status'])
+    messages.success(request, f"Category '{category.name}' is now {category.status}.")
+    return redirect('admin_categories')
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_category_delete_view(request, pk):
+    """Deletes category, blocking if it contains linked services."""
+    category = get_object_or_404(ServiceCategory, pk=pk)
+
+    if category.services.exists():
+        messages.error(
+            request,
+            f"Cannot delete category '{category.name}' because it contains {category.services.count()} services. Please delete or reassign them first."
+        )
+        return redirect('admin_categories')
+
+    name = category.name
+    category.delete()
+    messages.success(request, f"Category '{name}' deleted successfully.")
+    return redirect('admin_categories')
+
+
+@role_required(allowed_roles=['admin'])
+def admin_services_view(request):
+    """Moderate Services: View all services with Deactivate/Activate toggle."""
+    query = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', 'all').strip()
+
+    services_qs = Service.objects.select_related('provider', 'category').order_by('-created_at')
+
+    if status_filter in ['active', 'inactive']:
+        services_qs = services_qs.filter(status=status_filter)
+
+    if query:
+        services_qs = services_qs.filter(
+            Q(service_name__icontains=query) |
+            Q(provider__business_name__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+
+    context = {
+        'active_tab': 'services',
+        'services': services_qs,
+        'query': query,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/admin/services_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_service_toggle_status_view(request, pk):
+    """Toggles active/inactive status of any service (moderation action)."""
+    service = get_object_or_404(Service, pk=pk)
+    service.status = 'inactive' if service.status == 'active' else 'active'
+    service.save(update_fields=['status'])
+    status_str = "activated" if service.status == 'active' else "deactivated"
+    messages.success(request, f"Service '{service.service_name}' by '{service.provider.business_name}' has been {status_str}.")
+    return redirect('admin_services')
+
+
+@role_required(allowed_roles=['admin'])
+def admin_reviews_view(request):
+    """Moderate Reviews: Filter reviews and Approve/Reject."""
+    status_filter = request.GET.get('status', 'pending').strip()
+
+    reviews_qs = Review.objects.select_related('customer', 'service', 'service__provider').order_by('-review_date')
+
+    if status_filter in ['pending', 'approved', 'rejected']:
+        reviews_qs = reviews_qs.filter(moderation_status=status_filter)
+
+    context = {
+        'active_tab': 'reviews',
+        'reviews': reviews_qs,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/admin/reviews_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+@require_POST
+def admin_review_moderate_view(request, pk):
+    """Approve or reject a customer review."""
+    review = get_object_or_404(Review, pk=pk)
+    action = request.POST.get('action')
+
+    if action == 'approve':
+        review.moderation_status = 'approved'
+        review.save(update_fields=['moderation_status'])
+        messages.success(request, f"Review #{review.id} for '{review.service.service_name}' approved and is now visible publicly.")
+    elif action == 'reject':
+        review.moderation_status = 'rejected'
+        review.save(update_fields=['moderation_status'])
+        messages.warning(request, f"Review #{review.id} has been rejected.")
+    else:
+        messages.error(request, "Invalid moderation action.")
+
+    status_filter = request.POST.get('status_filter', 'pending')
+    return redirect(f"{reverse('admin_reviews')}?status={status_filter}")
+
+
+@role_required(allowed_roles=['admin'])
+def admin_requests_view(request):
+    """Read-only list of all service requests with status filter."""
+    status_filter = request.GET.get('status', 'all').strip()
+
+    requests_qs = ServiceRequest.objects.select_related('customer', 'service', 'service__provider').order_by('-request_date')
+
+    if status_filter in ['pending', 'accepted', 'rejected', 'completed', 'cancelled']:
+        requests_qs = requests_qs.filter(status=status_filter)
+
+    context = {
+        'active_tab': 'requests',
+        'requests': requests_qs,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/admin/requests_list.html', context)
+
+
+@role_required(allowed_roles=['admin'])
+def admin_enquiries_view(request):
+    """Read-only list of all contact enquiries with status filter."""
+    status_filter = request.GET.get('status', 'all').strip()
+
+    enquiries_qs = ContactEnquiry.objects.select_related('customer', 'provider').order_by('-enquiry_date')
+
+    if status_filter in ['new', 'replied']:
+        enquiries_qs = enquiries_qs.filter(status=status_filter)
+
+    context = {
+        'active_tab': 'enquiries',
+        'enquiries': enquiries_qs,
+        'status_filter': status_filter,
+    }
+    return render(request, 'dashboard/admin/enquiries_list.html', context)
+
+
+# ==============================================================================
+# 7. STATIC ABOUT & CONTACT PAGES
+# ==============================================================================
+
+def about_view(request):
+    """About Page showcasing platform vision and BCA mini project technical details."""
+    return render(request, 'about.html')
+
+
+def contact_view(request):
+    """Contact page with platform support details and enquiry message box."""
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        message_text = request.POST.get('message', '').strip()
+
+        if name and email and message_text:
+            messages.success(request, "Thank you! Your inquiry has been received. Our support team will reach out shortly.")
+            return redirect('contact')
+        else:
+            messages.error(request, "Please fill in all required fields.")
+
+    return render(request, 'contact.html')

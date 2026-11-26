@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Categories - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Service Categories</h1>
+        <p class="dashboard-subheading">Organize, create, toggle, and manage service classifications</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 2rem; align-items: start;">
+        
+        <!-- Left: Categories List -->
+        <div class="card">
+          <div class="card-title">
+            <span>Existing Categories</span>
+            <span class="badge badge-teal">{{ categories.count }} Total</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Services</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for cat in categories %}
+                  <tr>
+                    <td>
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.35rem;">{{ cat.icon }}</span>
+                        <div>
+                          <strong>{{ cat.name }}</strong>
+                          <div style="font-size: 0.75rem; color: var(--text-muted);">
+                            {{ cat.description|truncatewords:6 }}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge badge-teal">{{ cat.total_services }}</span>
+                    </td>
+                    <td>
+                      {% if cat.status == 'active' %}
+                        <span class="badge badge-success">Active</span>
+                      {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 0.35rem; align-items: center;">
+                        <a href="{% url 'admin_category_edit' cat.id %}" class="btn btn-secondary btn-xs">
+                          Edit
+                        </a>
+
+                        <form method="POST" action="{% url 'admin_category_toggle_status' cat.id %}" style="display: inline;">
+                          {% csrf_token %}
+                          {% if cat.status == 'active' %}
+                            <button type="submit" class="btn btn-secondary btn-xs" style="color: var(--warning);">
+                              Deactivate
+                            </button>
+                          {% else %}
+                            <button type="submit" class="btn btn-success-outline btn-xs">
+                              Activate
+                            </button>
+                          {% endif %}
+                        </form>
+
+                        <form method="POST" action="{% url 'admin_category_delete' cat.id %}" style="display: inline;" onsubmit="return confirm('Delete category \'{{ cat.name|escapejs }}\'? If it has linked services, deletion will be blocked.');">
+                          {% csrf_token %}
+                          <button type="submit" class="btn btn-danger-outline btn-xs">
+                            Delete
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Add Category Form -->
+        <div class="card">
+          <div class="card-title">
+            <span>➕ Add New Category</span>
+          </div>
+
+          <form method="POST" action="{% url 'admin_categories' %}">
+            {% csrf_token %}
+            <input type="hidden" name="add_category" value="1">
+
+            <div class="form-group">
+              <label class="form-label" for="id_name">Category Name *</label>
+              {{ form.name }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_icon">Emoji / Icon (e.g. ⚡, 🧹, 🚗) *</label>
+              {{ form.icon }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_description">Description</label>
+              {{ form.description }}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_status">Status</label>
+              {{ form.status }}
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              Create Category
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

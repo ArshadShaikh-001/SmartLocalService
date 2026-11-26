@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load service_tags %}
+
+{% block title %}Moderate Services - Admin Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">Service Listings Moderation</h1>
+        <p class="dashboard-subheading">Review all platform offerings and deactivate inappropriate or misleading services</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/admin/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <!-- Search & Status Filter -->
+      <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+        <form method="GET" action="{% url 'admin_services' %}" class="search-form" style="grid-template-columns: 2fr 1.5fr auto;">
+          <div class="search-field">
+            <span class="search-field-icon">🔍</span>
+            <input 
+              type="text" 
+              name="q" 
+              value="{{ query }}" 
+              class="search-input" 
+              placeholder="Search service name, provider or category..."
+            >
+          </div>
+
+          <div class="search-field">
+            <span class="search-field-icon">⚡</span>
+            <select name="status" class="search-input">
+              <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+              <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+              <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="height: 46px;">
+            Filter Services
+          </button>
+        </form>
+      </div>
+
+      <!-- Services Table -->
+      <div class="card">
+        <div class="card-title">
+          <span>All Platform Services</span>
+          <span class="badge badge-teal">{{ services.count }} Listing{{ services.count|pluralize }}</span>
+        </div>
+
+        {% if services %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Service Details</th>
+                  <th>Category</th>
+                  <th>Provider</th>
+                  <th>Price &amp; Area</th>
+                  <th>Status</th>
+                  <th>Moderation Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for srv in services %}
+                  <tr>
+                    <td>
+                      <strong style="color: var(--text-main);">
+                        <a href="{% url 'service_detail' srv.id %}" target="_blank">
+                          {{ srv.service_name }} ↗
+                        </a>
+                      </strong>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); max-width: 280px;">
+                        {{ srv.description|truncatewords:8 }}
+                      </div>
+                    </td>
+                    <td>{{ srv.category.icon }} {{ srv.category.name }}</td>
+                    <td>
+                      <div><strong>{{ srv.provider.business_name }}</strong></div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        {% if srv.provider.verification_status == 'verified' %}
+                          <span style="color: var(--success);">✓ Verified</span>
+                        {% else %}
+                          <span style="color: var(--warning);">⏳ Pending</span>
+                        {% endif %}
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; color: var(--primary-dark);">{{ srv.price_info }}</div>
+                      <div style="font-size: 0.75rem; color: var(--text-muted);">{{ srv.service_area|truncatewords:4 }}</div>
+                    </td>
+                    <td>
+                      {% if srv.status == 'active' %}
+                        <span class="badge badge-success">Active</span>
+                      {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <form method="POST" action="{% url 'admin_service_toggle_status' srv.id %}" onsubmit="return confirm('{% if srv.status == 'active' %}Deactivate service \'{{ srv.service_name|escapejs }}\'? It will no longer appear in search.{% else %}Re-activate service \'{{ srv.service_name|escapejs }}\'?{% endif %}');">
+                        {% csrf_token %}
+                        {% if srv.status == 'active' %}
+                          <button type="submit" class="btn btn-danger-outline btn-xs">
+                            Deactivate Listing
+                          </button>
+                        {% else %}
+                          <button type="submit" class="btn btn-success-outline btn-xs">
+                            Re-activate
+                          </button>
+                        {% endif %}
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            No services found matching your filters.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

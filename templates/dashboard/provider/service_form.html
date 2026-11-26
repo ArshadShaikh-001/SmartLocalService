@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit Service{% else %}Add New Service{% endif %} - Provider Portal{% endblock %}
+
+{% block content %}
+<section class="dashboard-header">
+  <div class="container">
+    <div class="dashboard-title-row">
+      <div>
+        <h1 class="dashboard-heading">{% if is_edit %}Edit Service: {{ service.service_name }}{% else %}Add New Service Offering{% endif %}</h1>
+        <p class="dashboard-subheading">Provide clear, transparent details for customers searching in your area</p>
+      </div>
+      <div>
+        <a href="{% url 'provider_services' %}" class="btn btn-secondary">
+          ← Back to My Services
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container">
+  <div class="dashboard-layout">
+    {% include 'dashboard/provider/sidebar.html' %}
+
+    <div class="dashboard-content">
+      <div class="card" style="max-width: 800px;">
+        <div class="card-title">
+          <span>{% if is_edit %}✏️ Update Service Details{% else %}➕ Create New Service Listing{% endif %}</span>
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <div class="form-group">
+              <label class="form-label" for="id_category">Service Category *</label>
+              {{ form.category }}
+              {% if form.category.errors %}
+                <div style="color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem;">{{ form.category.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_service_name">Service Name *</label>
+              {{ form.service_name }}
+              {% if form.service_name.errors %}
+                <div style="color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem;">{{ form.service_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+            <div class="form-group">
+              <label class="form-label" for="id_price_info">Price Guidance (e.g. Rs 300 onwards) *</label>
+              {{ form.price_info }}
+              {% if form.price_info.errors %}
+                <div style="color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem;">{{ form.price_info.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="id_service_area">Coverage Area / Sectors *</label>
+              {{ form.service_area }}
+              {% if form.service_area.errors %}
+                <div style="color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem;">{{ form.service_area.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="id_description">Service Description (minimum 10 characters) *</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+              <div style="color: var(--danger); font-size: 0.8rem; margin-top: 0.25rem;">{{ form.description.errors.0 }}</div>
+            {% endif %}
+            <div class="form-help">Detail what tasks are included, inspection charges, or tools required.</div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+            <a href="{% url 'provider_services' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+              {% if is_edit %}Save Changes{% else %}Publish Service{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
